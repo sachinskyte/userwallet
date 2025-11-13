@@ -80,8 +80,16 @@ export const CredentialList = () => {
 
   const handleInjectCredential = () => {
     const template = credentialTemplates[Math.floor(Math.random() * credentialTemplates.length)];
-    const issuerDid = fakeDid();
-    const subjectDid = did ?? fakeDid();
+    const issuerDid = fakeDid(); // Issuer DID can be fake for demo
+    const subjectDid = did ?? localStorage.getItem("pv_did");
+    if (!subjectDid) {
+      toast({
+        title: "Error",
+        description: "User DID not found. Please login first.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const subjectFields = template.fields.reduce<Record<string, string>>((acc, field) => {
       const key = field.label.toLowerCase().replace(/\s+/g, "_");

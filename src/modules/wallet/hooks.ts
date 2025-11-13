@@ -10,14 +10,3 @@ export const useWallet = () => useWalletStore(selectWallet);
 export const useWalletActions = () => useWalletStore(selectWalletActions);
 export const useHasDid = () => useWalletStore(selectHasDid);
 
-export const useEnsureDid = () => {
-  const { did } = useWallet();
-  const { generateDid } = useWalletActions();
-
-  useEffect(() => {
-    if (!did) {
-      generateDid();
-    }
-  }, [did, generateDid]);
-};
-

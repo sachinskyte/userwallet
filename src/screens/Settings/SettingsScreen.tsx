@@ -12,13 +12,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/useTheme";
 import { useWalletActions } from "@/modules/wallet/hooks";
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 export const SettingsScreen = () => {
   const { theme, toggleTheme } = useTheme();
   const { logout } = useWalletActions();
+  const navigate = useNavigate();
   const [developerMode, setDeveloperMode] = useState(false);
   const [secureStorage, setSecureStorage] = useState(true);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <div className="space-y-6">
@@ -53,7 +60,7 @@ export const SettingsScreen = () => {
               </div>
               <Button
                 variant="outline"
-                onClick={() => logout()}
+                onClick={handleLogout}
               >
                 Logout
               </Button>

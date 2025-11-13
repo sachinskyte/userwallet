@@ -38,8 +38,16 @@ const IssuerSimulator = () => {
     const application = applications.find((a) => a.id === applicationId);
     if (!application) return;
 
-    const issuerDid = fakeDid();
-    const subjectDid = application.subjectDid ?? did ?? fakeDid();
+    const issuerDid = fakeDid(); // Issuer DID can be fake for demo
+    const subjectDid = application.subjectDid ?? did ?? localStorage.getItem("pv_did") ?? "";
+    if (!subjectDid) {
+      toast({
+        title: "Error",
+        description: "User DID not found. Please login first.",
+        variant: "destructive",
+      });
+      return;
+    }
     const vc = fakeVc(issuerDid, subjectDid, application.fields);
     const vcCid = vc.evidence?.cid ?? fakeCid();
     const vcTx = vc.evidence?.chainTx ?? fakeTxHash();

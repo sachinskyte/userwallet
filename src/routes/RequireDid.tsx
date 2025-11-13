@@ -1,12 +1,11 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useHasDid } from "@/modules/wallet/hooks";
 
 export const RequireDid = () => {
-  const hasDid = useHasDid();
   const location = useLocation();
+  const did = localStorage.getItem("pv_did");
 
-  if (!hasDid) {
-    return <Navigate to="/welcome" replace state={{ from: location }} />;
+  if (!did) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   return <Outlet />;

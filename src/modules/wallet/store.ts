@@ -107,7 +107,6 @@ type WalletState = {
 };
 
 type WalletActions = {
-  generateDid: (force?: boolean) => string;
   setDid: (did: string | null) => void;
   logout: () => void;
   addDocument: (
@@ -221,25 +220,6 @@ export const useWalletStore = create<WalletStore>()(
     (set, get) => ({
       wallet: initialState,
       actions: {
-        generateDid: (force = false) => {
-          const { wallet } = get();
-          if (wallet.did && !force) {
-            return wallet.did;
-          }
-
-          const newDid = `did:pvault:${uuidv4().replace(/-/g, "").slice(0, 32)}`;
-          const timestamp = new Date().toISOString();
-
-          set({
-            wallet: {
-              ...wallet,
-              did: newDid,
-              didCreatedAt: timestamp,
-            },
-          });
-
-          return newDid;
-        },
         setDid: (did) => {
           const { wallet } = get();
           set({
@@ -252,6 +232,11 @@ export const useWalletStore = create<WalletStore>()(
         },
         logout: () => {
           const { wallet } = get();
+          // Clear localStorage
+          localStorage.removeItem("pv_did");
+          localStorage.removeItem("pv_addr");
+          localStorage.removeItem("pv_key");
+          localStorage.removeItem("pv_vault");
           set({
             wallet: {
               ...wallet,

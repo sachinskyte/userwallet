@@ -87,6 +87,12 @@ const navItems: NavItem[] = [
     icon: Settings,
     description: "Vault preferences, environment, and developer tools.",
   },
+  {
+    label: "Wallet Login",
+    to: "/wallet-login",
+    icon: Wallet2,
+    description: "Connect MetaMask to create DID and encrypt vault locally.",
+  },
 ];
 
 export const AppLayout = () => {
@@ -159,6 +165,11 @@ export const AppLayout = () => {
           </div>
           <nav className="hidden items-center gap-1 md:flex">
             {navItems.map((item) => renderNavLink(item))}
+            {typeof window !== "undefined" && localStorage.getItem("pv_did") && (
+              <Badge variant="outline" className="ml-2 font-mono text-xs">
+                {localStorage.getItem("pv_did")?.slice(0, 20)}…
+              </Badge>
+            )}
           </nav>
           <div className="flex items-center gap-2">
             <Sheet open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>

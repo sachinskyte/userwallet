@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowRight, CloudUpload, QrCode, Shield, ShieldCheck } from "lucide-react";
-import { DIDCard } from "@/modules/did/components/DIDCard";
 import { useWallet } from "@/modules/wallet/hooks";
 
 const formatRelative = (iso: string) => {
@@ -81,7 +80,31 @@ export const HomeScreen = () => {
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-        <DIDCard />
+        <Card className="bg-card/60">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              Your Decentralized Identity
+            </CardTitle>
+            <CardDescription>
+              Your DID is derived from your MetaMask wallet address and chain ID.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-lg border bg-muted/40 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                DID (did:pkh)
+              </p>
+              <p className="font-mono text-sm break-all text-foreground">
+                {localStorage.getItem("pv_did") || "Not connected"}
+              </p>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              <p>This DID is permanently tied to your wallet address and cannot be regenerated.</p>
+              <p className="mt-2">To change your DID, connect a different wallet address.</p>
+            </div>
+          </CardContent>
+        </Card>
         <Card className="bg-card/60">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
