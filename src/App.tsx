@@ -4,6 +4,7 @@ import AppLayout from "@/layout/AppLayout";
 import OnboardingLayout from "@/layout/OnboardingLayout";
 import { HomeScreen } from "@/screens/Home/HomeScreen";
 import { ApplyScreen } from "@/screens/apply/ApplyScreen";
+import { RequestsScreen } from "@/screens/requests/RequestsScreen";
 import { CredentialsScreen } from "@/screens/Credentials/CredentialsScreen";
 import { ShareScreen } from "@/screens/Share/ShareScreen";
 import { RecoveryScreen } from "@/screens/Recovery/RecoveryScreen";
@@ -31,6 +32,7 @@ const App = () => {
             <Route path="home" element={<HomeScreen />} />
             <Route path="apply" element={<ApplyScreen />} />
             <Route path="credentials" element={<CredentialsScreen />} />
+            <Route path="requests" element={<RequestsScreen />} />
             <Route path="share" element={<ShareScreen />} />
             <Route path="recovery" element={<RecoveryScreen />} />
             <Route path="settings" element={<SettingsScreen />} />

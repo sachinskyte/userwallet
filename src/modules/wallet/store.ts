@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import { fakeCid, fakeTxHash, fakeBlockNumber } from "@/lib/fakeChain";
 
 export type DocumentStatus = "pending" | "encrypted" | "uploaded" | "failed";
 
@@ -74,6 +73,28 @@ export type WalletApplication = {
   vc?: VCObject | null;
 };
 
+export type RequestStatus = "Pending" | "Approved" | "Denied";
+
+export type CredentialRequestResult = {
+  cid: string;
+  tx: string;
+  block: number;
+  disclosedFields: Record<string, string>;
+  proofHash: string;
+};
+
+export type CredentialRequest = {
+  id: string;
+  verifierDID: string;
+  requestedFields: string[];
+  purpose: string;
+  orgName?: string;
+  timestamp: number;
+  status: RequestStatus;
+  result?: CredentialRequestResult;
+  credentialId?: string;
+};
+
 type WalletState = {
   did: string | null;
   didCreatedAt?: string;
@@ -81,6 +102,8 @@ type WalletState = {
   credentials: WalletCredential[];
   shares: RecoveryShare[];
   applications: WalletApplication[];
+  requests: CredentialRequest[];
+  approvedRequests: CredentialRequest[];
 };
 
 type WalletActions = {
@@ -113,6 +136,20 @@ type WalletActions = {
     status?: ApplicationStatus;
   }) => WalletApplication;
   updateApplication: (id: string, patch: Partial<WalletApplication>) => void;
+  addRequest: (input: Omit<CredentialRequest, "status" | "timestamp"> & {
+    id?: string;
+    status?: RequestStatus;
+    timestamp?: number;
+  }) => CredentialRequest;
+  approveRequest: (
+    id: string,
+    payload: {
+      credentialId: string;
+      disclosedFields: Record<string, string>;
+      result: CredentialRequestResult;
+    }
+  ) => void;
+  denyRequest: (id: string) => void;
 };
 
 type WalletStore = {
@@ -175,6 +212,8 @@ const initialState: WalletState = {
   credentials: initialCredentials,
   shares: [],
   applications: [],
+  requests: [],
+  approvedRequests: [],
 };
 
 export const useWalletStore = create<WalletStore>()(
@@ -219,6 +258,8 @@ export const useWalletStore = create<WalletStore>()(
               did: null,
               didCreatedAt: undefined,
               applications: [],
+              requests: [],
+              approvedRequests: [],
             },
           });
         },
@@ -383,6 +424,70 @@ export const useWalletStore = create<WalletStore>()(
                       vc: patch.vc ?? application.vc,
                     }
                   : application
+              ),
+            },
+          });
+        },
+        addRequest: (input) => {
+          const { wallet } = get();
+          const record: CredentialRequest = {
+            id: input.id ?? uuidv4(),
+            verifierDID: input.verifierDID,
+            requestedFields: input.requestedFields,
+            purpose: input.purpose,
+            orgName: input.orgName,
+            timestamp: input.timestamp ?? Date.now(),
+            status: input.status ?? "Pending",
+            result: input.result,
+            credentialId: input.credentialId,
+          };
+
+          set({
+            wallet: {
+              ...wallet,
+              requests: [record, ...wallet.requests],
+            },
+          });
+
+          return record;
+        },
+        approveRequest: (id, payload) => {
+          const { wallet } = get();
+          const updatedRequests = wallet.requests.map((request) =>
+            request.id === id
+              ? {
+                  ...request,
+                  status: "Approved" as RequestStatus,
+                  result: payload.result,
+                  credentialId: payload.credentialId,
+                }
+              : request
+          );
+
+          const approvedRequest = updatedRequests.find((request) => request.id === id);
+
+          set({
+            wallet: {
+              ...wallet,
+              requests: updatedRequests,
+              approvedRequests: approvedRequest
+                ? [approvedRequest, ...wallet.approvedRequests.filter((req) => req.id !== id)]
+                : wallet.approvedRequests,
+            },
+          });
+        },
+        denyRequest: (id) => {
+          const { wallet } = get();
+          set({
+            wallet: {
+              ...wallet,
+              requests: wallet.requests.map((request) =>
+                request.id === id
+                  ? {
+                      ...request,
+                      status: "Denied" as RequestStatus,
+                    }
+                  : request
               ),
             },
           });

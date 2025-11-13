@@ -40,6 +40,7 @@ import {
   Wallet2,
   QrCode,
   FileSignature,
+  Inbox,
 } from "lucide-react";
 
 type NavItem = {
@@ -61,6 +62,12 @@ const navItems: NavItem[] = [
     to: "/apply",
     icon: FileSignature,
     description: "Request high-trust identity credentials via simulated issuer nodes.",
+  },
+  {
+    label: "Requests",
+    to: "/requests",
+    icon: Inbox,
+    description: "Review incoming disclosures and manage verifier access.",
   },
   {
     label: "Credentials",
