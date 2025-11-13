@@ -122,10 +122,10 @@ export const AppLayout = () => {
         to={item.to}
         className={({ isActive }) =>
           cn(
-            "flex items-center gap-2 rounded-md border border-transparent px-3 py-2 text-sm font-medium transition-colors",
+            "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
             isActive
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              ? "bg-accent text-accent-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
             isSidebar && "w-full justify-start"
           )
         }
@@ -138,9 +138,9 @@ export const AppLayout = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-40 border-b bg-card/70 backdrop-blur">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 transition-colors sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Wallet2 className="h-5 w-5" />
@@ -177,7 +177,7 @@ export const AppLayout = () => {
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="flex w-full max-w-xs flex-col gap-6 px-0">
+              <SheetContent side="left" className="flex w-full max-w-xs flex-col gap-6 bg-background px-0 text-foreground">
                 <SheetHeader className="px-6">
                   <SheetTitle className="flex items-center gap-2 text-lg">
                     <QrCode className="h-5 w-5 text-primary" />
@@ -207,7 +207,7 @@ export const AppLayout = () => {
         </div>
       </header>
       <div className="mx-auto flex w-full max-w-6xl flex-1 gap-6 px-4 pb-10 pt-6 sm:px-6 lg:gap-10">
-        <aside className="sticky top-20 hidden h-fit min-w-[220px] flex-col gap-3 rounded-xl border bg-card/50 p-4 lg:flex">
+        <aside className="sticky top-20 hidden h-fit min-w-[220px] flex-col gap-3 rounded-xl border border-border/60 bg-card p-4 text-card-foreground lg:flex">
           <div className="flex flex-col gap-1">
             <span className="text-sm font-semibold text-muted-foreground">
               Navigation
