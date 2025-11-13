@@ -100,20 +100,43 @@ export const AppLayout = () => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   const activeDescription = useMemo(() => {
-    const active = navItems.find((item) => item.to === location.pathname);
+    // HashRouter pathname handling - pathname should already be without hash
+    const path = location.pathname;
+    const active = navItems.find((item) => {
+      if (item.to === "/") {
+        return path === "/" || path === "";
+      }
+      // Match exact path or paths that start with the item path
+      return path === item.to || path.startsWith(item.to + "/");
+    });
     return active?.description ?? "Navigate through the wallet toolkit.";
   }, [location.pathname]);
 
   const breadcrumbSegments = useMemo(() => {
-    const segments = location.pathname.split("/").filter(Boolean);
+    // Remove hash from pathname if present (HashRouter compatibility)
+    const path = location.pathname.replace(/^#/, "");
+    const segments = path.split("/").filter(Boolean);
+    
     if (segments.length === 0) {
       return [{ label: "Home", to: "/" }];
     }
 
+    // Map segment names to readable labels
+    const labelMap: Record<string, string> = {
+      apply: "Apply",
+      credentials: "Credentials",
+      requests: "Requests",
+      share: "Share",
+      recovery: "Recovery",
+      settings: "Settings",
+      "issuer-simulator": "Issuer Simulator",
+      "wallet-login": "Wallet Login",
+    };
+
     return [
       { label: "Home", to: "/" },
       ...segments.map((segment, index) => ({
-        label: segment.charAt(0).toUpperCase() + segment.slice(1),
+        label: labelMap[segment] || segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " "),
         to: `/${segments.slice(0, index + 1).join("/")}`,
       })),
     ];
@@ -136,6 +159,12 @@ export const AppLayout = () => {
           )
         }
         end={item.to === "/"}
+        onClick={() => {
+          // Close mobile nav when clicking a link
+          if (isSidebar) {
+            setIsMobileNavOpen(false);
+          }
+        }}
       >
         <Icon className="h-4 w-4" />
         <span>{item.label}</span>

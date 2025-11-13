@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ const formatRelative = (iso: string) => {
 
 export const HomeScreen = () => {
   const { documents, credentials, shares } = useWallet();
+  const navigate = useNavigate();
 
   const recentDocuments = useMemo(() => documents.slice(0, 3), [documents]);
   const activeCredentials = useMemo(
@@ -40,12 +42,14 @@ export const HomeScreen = () => {
               locally until you choose to broadcast.
             </p>
             <div className="flex flex-wrap gap-3">
-              <Button className="gap-2">
+              <Button className="gap-2" onClick={() => navigate("/apply")}>
                 Launch credential flow
                 <ArrowRight className="h-4 w-4" />
               </Button>
-              <Button variant="outline" className="gap-2" asChild>
-                <a href="#documents">Manage documents</a>
+              <Button variant="outline" className="gap-2" onClick={() => {
+                document.getElementById("documents")?.scrollIntoView({ behavior: "smooth" });
+              }}>
+                Manage documents
               </Button>
             </div>
           </div>
@@ -166,11 +170,9 @@ export const HomeScreen = () => {
                 Each upload is bundled with a vault CID for replication preview.
               </CardDescription>
             </div>
-            <Button variant="outline" className="gap-2" asChild>
-              <a href="/apply">
-                <CloudUpload className="h-4 w-4" />
-                Start new application
-              </a>
+            <Button variant="outline" className="gap-2" onClick={() => navigate("/apply")}>
+              <CloudUpload className="h-4 w-4" />
+              Start new application
             </Button>
           </CardHeader>
           <CardContent className="divide-y">
@@ -291,8 +293,8 @@ export const HomeScreen = () => {
                   module.
                 </p>
               </div>
-              <Button variant="ghost" size="sm" className="ml-auto" asChild>
-                <a href="/share">Open</a>
+              <Button variant="ghost" size="sm" className="ml-auto" onClick={() => navigate("/share")}>
+                Open
               </Button>
             </div>
             <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3">
@@ -303,8 +305,8 @@ export const HomeScreen = () => {
                   Simulate guardian input with three shares to verify unlock readiness.
                 </p>
               </div>
-              <Button variant="ghost" size="sm" className="ml-auto" asChild>
-                <a href="/recovery">Start</a>
+              <Button variant="ghost" size="sm" className="ml-auto" onClick={() => navigate("/recovery")}>
+                Start
               </Button>
             </div>
           </CardContent>

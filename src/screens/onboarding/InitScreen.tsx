@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useWallet } from "@/modules/wallet/hooks";
 
 type Step = {
   label: string;
@@ -28,14 +27,14 @@ const steps: Step[] = [
 ];
 
 export const InitScreen = () => {
-  const { did } = useWallet();
   const navigate = useNavigate();
   const [stepIndex, setStepIndex] = useState(0);
   const [isReady, setIsReady] = useState(false);
+  const did = typeof window !== "undefined" ? localStorage.getItem("pv_did") : null;
 
   useEffect(() => {
     if (!did) {
-      navigate("/welcome", { replace: true });
+      navigate("/login", { replace: true });
     }
   }, [did, navigate]);
 
