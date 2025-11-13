@@ -206,22 +206,7 @@ export const AppLayout = () => {
           </div>
         </div>
       </header>
-      <div className="mx-auto flex w-full max-w-6xl flex-1 gap-6 px-4 pb-10 pt-6 sm:px-6 lg:gap-10">
-        <aside className="sticky top-20 hidden h-fit min-w-[220px] flex-col gap-3 rounded-xl border border-border/60 bg-card p-4 text-card-foreground lg:flex">
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-semibold text-muted-foreground">
-              Navigation
-            </span>
-            <Separator />
-          </div>
-          <div className="flex flex-col gap-1">
-            {navItems.map((item) => renderNavLink(item, true))}
-          </div>
-          <div className="rounded-md border border-dashed bg-muted/40 p-3 text-xs text-muted-foreground">
-            Future modules like analytics, governance, and social recovery
-            orchestration will surface here.
-          </div>
-        </aside>
+      <div className="mx-auto flex w-full max-w-6xl flex-1 px-4 pb-10 pt-6 sm:px-6">
         <main className="flex-1 space-y-6">
           <div className="rounded-xl border bg-card/60 px-4 py-3 text-sm text-muted-foreground sm:px-6">
             {activeDescription}
