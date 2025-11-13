@@ -76,12 +76,6 @@ const navItems: NavItem[] = [
     description: "Generate sharable QR codes and connection invites.",
   },
   {
-    label: "Recovery",
-    to: "/recovery",
-    icon: ShieldCheck,
-    description: "Coordinate key recovery flows and guardians.",
-  },
-  {
     label: "Settings",
     to: "/settings",
     icon: Settings,
@@ -100,7 +94,6 @@ export const AppLayout = () => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   const activeDescription = useMemo(() => {
-    // HashRouter pathname handling - pathname should already be without hash
     const path = location.pathname;
     const active = navItems.find((item) => {
       if (item.to === "/") {
@@ -113,8 +106,7 @@ export const AppLayout = () => {
   }, [location.pathname]);
 
   const breadcrumbSegments = useMemo(() => {
-    // Remove hash from pathname if present (HashRouter compatibility)
-    const path = location.pathname.replace(/^#/, "");
+    const path = location.pathname;
     const segments = path.split("/").filter(Boolean);
     
     if (segments.length === 0) {
