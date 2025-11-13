@@ -52,13 +52,13 @@ const navItems: NavItem[] = [
     label: "Home",
     to: "/",
     icon: Home,
-    description: "Overview of your decentralized identity wallet.",
+    description: "Overview of your Pandora's Vault command center.",
   },
   {
     label: "Upload",
     to: "/upload",
     icon: UploadCloud,
-    description: "Import wallet backups, DIDs, or identity documents.",
+    description: "Import vault backups, DIDs, or identity documents.",
   },
   {
     label: "Credentials",
@@ -82,7 +82,7 @@ const navItems: NavItem[] = [
     label: "Settings",
     to: "/settings",
     icon: Settings,
-    description: "Wallet preferences, environment, and developer tools.",
+    description: "Vault preferences, environment, and developer tools.",
   },
 ];
 
@@ -146,8 +146,8 @@ export const AppLayout = () => {
               <Wallet2 className="h-5 w-5" />
             </div>
             <div className="flex flex-col">
-              <span className="text-base font-semibold tracking-tight">
-                Identity Wallet
+              <span className="text-base font-semibold tracking-tight text-foreground">
+                Pandora&apos;s Vault
               </span>
               <span className="text-xs text-muted-foreground">
                 DID Toolkit & Credential Vault
@@ -181,10 +181,10 @@ export const AppLayout = () => {
                 <SheetHeader className="px-6">
                   <SheetTitle className="flex items-center gap-2 text-lg">
                     <QrCode className="h-5 w-5 text-primary" />
-                    Identity Wallet
+                    Pandora&apos;s Vault
                   </SheetTitle>
                   <p className="text-sm text-muted-foreground">
-                    Quick access to every part of your decentralized identity wallet.
+                    Quick access to every part of your decentralized identity vault.
                   </p>
                 </SheetHeader>
                 <div className="px-6">
@@ -257,7 +257,7 @@ export const AppLayout = () => {
       </div>
       <footer className="border-t bg-muted/40">
         <div className="mx-auto flex w-full max-w-6xl flex-col-reverse gap-3 px-4 py-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <span>© {new Date().getFullYear()} Identity Wallet. Prototype interface for decentralized identity management.</span>
+          <span>© {new Date().getFullYear()} Pandora&apos;s Vault. Prototype interface for decentralized identity management.</span>
           <div className="flex items-center gap-2">
             <Badge variant="secondary">DID Core Ready</Badge>
             <Badge variant="secondary">Credential vNext</Badge>

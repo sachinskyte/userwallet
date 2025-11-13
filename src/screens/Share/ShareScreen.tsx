@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { QrReader } from "react-qr-reader";
+import QrScanner from "react-qr-scanner";
 import { v4 as uuidv4 } from "uuid";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -185,6 +185,21 @@ export const ShareScreen = () => {
       setScanError("Invalid QR payload. Ensure it contains serialized JSON from Pandora's Vault.");
     }
   };
+
+  const handleScan = useCallback(
+    (data: string | null) => {
+      if (data) {
+        handleScannerResult(data);
+      }
+    },
+    [handleScannerResult]
+  );
+
+  const handleScanError = useCallback((error: unknown) => {
+    if (error instanceof Error) {
+      console.error("QR scan error:", error.message);
+    }
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -425,24 +440,11 @@ export const ShareScreen = () => {
         <CardContent className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-3 rounded-2xl border bg-muted/20 p-4">
             <div className="overflow-hidden rounded-xl border bg-background">
-              <QrReader
-                constraints={{ facingMode: "environment" }}
-                onResult={(result, error) => {
-                  if (result) {
-                    const payloadAccessor = result as unknown as {
-                      text?: string;
-                      getText?: () => string;
-                    };
-                    const text = payloadAccessor.text ?? payloadAccessor.getText?.() ?? "";
-                    if (text) {
-                      handleScannerResult(text);
-                    }
-                  }
-                  if (error) {
-                    // Optional: log errors during continuous scanning
-                  }
-                }}
-                videoStyle={{ width: "100%" }}
+              <QrScanner
+                delay={300}
+                onError={handleScanError}
+                onScan={handleScan}
+                style={{ width: "100%" }}
               />
             </div>
             <p className="text-xs text-muted-foreground">
