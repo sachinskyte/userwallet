@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
 import { useWallet, useWalletActions } from "@/modules/wallet/hooks";
@@ -356,6 +356,19 @@ export const ApplyScreen = () => {
     };
   }, [isCameraOpen, toast]);
 
+  useEffect(() => {
+    if (!isCameraOpen) {
+      return;
+    }
+
+    const previousOverflow = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.documentElement.style.overflow = previousOverflow;
+    };
+  }, [isCameraOpen]);
+
   const handleCapturePhoto = () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
@@ -495,158 +508,216 @@ export const ApplyScreen = () => {
       </Card>
 
       <Dialog open={Boolean(activeForm)} onOpenChange={(open) => !open && setActiveForm(null)}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-h-[90vh] w-full max-w-xl overflow-hidden flex flex-col touch-pan-y">
           {activeForm && (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <DialogHeader className="space-y-2">
-                <DialogTitle>{activeForm.title}</DialogTitle>
-                <DialogDescription>
-                  Fill in the required demographic fields. Supporting evidence uploads are represented as offline placeholders in this demo.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                {activeForm.fields.map((field) => {
-                  if (field.type === "placeholder") {
-                    const showCapturePreview = field.capture && capturedPhoto && isCapturingForField === field.name;
-                    return (
-                      <div
-                        key={field.name}
-                        className="rounded-lg border border-dashed border-muted bg-muted/20 p-4 text-sm text-muted-foreground"
-                      >
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <p className="font-medium text-foreground">{field.label}</p>
-                            <p className="text-xs text-muted-foreground/80">{field.description}</p>
+            <form onSubmit={handleSubmit} className="flex flex-1 flex-col">
+              <div className="max-h-[80vh] overflow-y-auto p-4 space-y-4 touch-pan-y">
+                <DialogHeader className="space-y-2">
+                  <DialogTitle>{activeForm.title}</DialogTitle>
+                  <DialogDescription>
+                    Fill in the required demographic fields. Supporting evidence uploads are represented as offline placeholders in this demo.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {activeForm.fields.map((field) => {
+                    if (field.type === "placeholder") {
+                      const showCapturePreview = field.capture && capturedPhoto && isCapturingForField === field.name;
+                      return (
+                        <div
+                          key={field.name}
+                          className="rounded-lg border border-dashed border-muted bg-muted/20 p-4 text-sm text-muted-foreground"
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <p className="font-medium text-foreground">{field.label}</p>
+                              <p className="text-xs text-muted-foreground/80">{field.description}</p>
+                            </div>
+                            {field.capture && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setIsCapturingForField(field.name);
+                                  setIsCameraOpen(true);
+                                }}
+                              >
+                                {capturedPhoto && isCapturingForField === field.name ? "Retake" : "Open camera"}
+                              </Button>
+                            )}
                           </div>
-                          {field.capture && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setIsCapturingForField(field.name);
-                                setIsCameraOpen(true);
-                              }}
-                            >
-                              {capturedPhoto && isCapturingForField === field.name ? "Retake" : "Open camera"}
-                            </Button>
+                          {showCapturePreview && (
+                            <div className="mt-3 overflow-hidden rounded-md border bg-background/80">
+                              <img src={capturedPhoto} alt="Captured preview" className="w-full object-cover" />
+                            </div>
                           )}
                         </div>
-                        {showCapturePreview && (
-                          <div className="mt-3 overflow-hidden rounded-md border bg-background/80">
-                            <img src={capturedPhoto} alt="Captured preview" className="w-full object-cover" />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
+                      );
+                    }
 
-                  if (field.type === "select") {
+                    if (field.type === "select") {
+                      return (
+                        <div key={field.name} className="space-y-2">
+                          <label className="text-sm font-medium text-foreground">{field.label}</label>
+                          <Select value={formState[field.name]} onValueChange={(value) => handleFormChange(field.name, value)}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select an option" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {field.options.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {field.helper && <p className="text-xs text-muted-foreground">{field.helper}</p>}
+                        </div>
+                      );
+                    }
+
                     return (
                       <div key={field.name} className="space-y-2">
                         <label className="text-sm font-medium text-foreground">{field.label}</label>
-                        <Select value={formState[field.name]} onValueChange={(value) => handleFormChange(field.name, value)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select an option" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {field.options.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Input
+                          type={field.type === "date" ? "date" : field.type === "tel" ? "tel" : "text"}
+                          placeholder={field.placeholder}
+                          value={formState[field.name] ?? ""}
+                          onChange={(event) => handleFormChange(field.name, event.target.value)}
+                          required
+                        />
                         {field.helper && <p className="text-xs text-muted-foreground">{field.helper}</p>}
                       </div>
                     );
-                  }
-
-                  return (
-                    <div key={field.name} className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">{field.label}</label>
-                      <Input
-                        type={field.type === "date" ? "date" : field.type === "tel" ? "tel" : "text"}
-                        placeholder={field.placeholder}
-                        value={formState[field.name] ?? ""}
-                        onChange={(event) => handleFormChange(field.name, event.target.value)}
-                        required
-                      />
-                      {field.helper && <p className="text-xs text-muted-foreground">{field.helper}</p>}
-                    </div>
-                  );
-                })}
+                  })}
+                </div>
+                <div className="sticky bottom-0 bg-background p-3 border-t flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setActiveForm(null);
+                      setCapturedPhoto(null);
+                      setIsCapturingForField(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="flex-1">
+                    Submit application
+                  </Button>
+                </div>
               </div>
-              <DialogFooter className="gap-2">
-                <Button type="button" variant="ghost" onClick={() => setActiveForm(null)}>
-                  Cancel
-                </Button>
-                <Button type="submit">Submit application</Button>
-              </DialogFooter>
             </form>
           )}
         </DialogContent>
       </Dialog>
 
       <Dialog open={Boolean(reviewApplication)} onOpenChange={(open) => !open && setReviewApplication(null)}>
-        <DialogContent className="max-w-xl space-y-4">
+        <DialogContent className="max-h-[90vh] w-full max-w-xl overflow-hidden flex flex-col touch-pan-y">
           {reviewApplication && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{reviewApplication.type}</DialogTitle>
-                <DialogDescription>Application metadata anchored to the simulated chain.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-3 rounded-lg border bg-muted/20 p-4 text-xs text-muted-foreground">
-                <p>
-                  <span className="font-semibold text-foreground">Status:</span> {reviewApplication.status}
-                </p>
-                <p>
-                  <span className="font-semibold text-foreground">Submitted:</span>{" "}
-                  {new Date(reviewApplication.submittedAt).toLocaleString()}
-                </p>
-                <p className="font-mono">CID {reviewApplication.cid}</p>
-                <p className="font-mono">Tx {reviewApplication.tx}</p>
-                <p className="font-mono">Block #{reviewApplication.block}</p>
-              </div>
-              <Separator />
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-foreground">Submitted fields</p>
-                <div className="grid gap-2 text-sm text-muted-foreground">
-                  {Object.entries(reviewApplication.fields).map(([key, value]) => (
-                    <div key={key} className="rounded-md border bg-background/80 px-3 py-2">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground/70">{key}</p>
-                      <p className={cn("font-mono text-sm text-foreground", value.length > 48 && "break-all")}>{value}</p>
-                    </div>
-                  ))}
+            <div className="flex flex-1 flex-col">
+              <div className="max-h-[80vh] overflow-y-auto p-4 space-y-4 touch-pan-y">
+                <DialogHeader>
+                  <DialogTitle>{reviewApplication.type}</DialogTitle>
+                  <DialogDescription>Application metadata anchored to the simulated chain.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3 rounded-lg border bg-muted/20 p-4 text-xs text-muted-foreground">
+                  <p>
+                    <span className="font-semibold text-foreground">Status:</span>{" "}
+                    {statusLabels[reviewApplication.status] ?? reviewApplication.status}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-foreground">Submitted:</span>{" "}
+                    {new Date(reviewApplication.submittedAt).toLocaleString()}
+                  </p>
+                  <p className="font-mono">CID {reviewApplication.cid}</p>
+                  <p className="font-mono">Tx {reviewApplication.tx}</p>
+                  <p className="font-mono">Block #{reviewApplication.block}</p>
+                </div>
+                <Separator />
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-foreground">Submitted fields</p>
+                  <div className="grid gap-2 text-sm text-muted-foreground">
+                    {Object.entries(reviewApplication.fields).map(([key, value]) => (
+                      <div key={key} className="rounded-md border bg-background/80 px-3 py-2">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground/70">{key}</p>
+                        <p className={cn("font-mono text-sm text-foreground", value.length > 48 && "break-all")}>{value}</p>
+                      </div>
+                    ))}
+                    {reviewApplication.photo && (
+                      <div className="rounded-md border bg-background/80 px-3 py-2">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground/70">photo</p>
+                        <img
+                          src={reviewApplication.photo}
+                          alt="Captured preview"
+                          className="mt-2 h-32 w-full rounded-md object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <Separator />
+                <div className="grid gap-2 text-xs text-muted-foreground">
+                  {reviewApplication.did && (
+                    <p>
+                      <span className="font-semibold text-foreground">DID:</span>{" "}
+                      <span className="font-mono">{reviewApplication.did}</span>
+                    </p>
+                  )}
+                  {reviewApplication.publicKey && (
+                    <p>
+                      <span className="font-semibold text-foreground">Public key:</span>{" "}
+                      <span className="font-mono break-all">{reviewApplication.publicKey}</span>
+                    </p>
+                  )}
+                  {reviewApplication.privateKey && (
+                    <p>
+                      <span className="font-semibold text-foreground">Private key:</span>{" "}
+                      <span className="font-mono break-all text-muted-foreground/80">
+                        {reviewApplication.privateKey}
+                      </span>
+                    </p>
+                  )}
+                </div>
+                <div className="sticky bottom-0 bg-background p-3 border-t flex gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => setReviewApplication(null)}>
+                    Close
+                  </Button>
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="ghost" onClick={() => setReviewApplication(null)}>
-                  Close
-                </Button>
-              </DialogFooter>
-            </>
+            </div>
           )}
         </DialogContent>
       </Dialog>
 
       <Dialog open={isCameraOpen} onOpenChange={(open) => setIsCameraOpen(open)}>
-        <DialogContent className="max-w-lg space-y-4">
-          <DialogHeader>
-            <DialogTitle>Capture photo</DialogTitle>
-            <DialogDescription>Use your device camera to capture an image for offline verification.</DialogDescription>
-          </DialogHeader>
-          <div className="overflow-hidden rounded-lg border bg-black">
-            <video ref={videoRef} autoPlay playsInline className="w-full" />
+        <DialogContent className="max-h-[90vh] w-full max-w-lg overflow-hidden flex flex-col touch-pan-y">
+          <div className="flex flex-1 flex-col">
+            <div className="max-h-[80vh] overflow-y-auto p-4 space-y-4 touch-pan-y">
+              <DialogHeader>
+                <DialogTitle>Capture photo</DialogTitle>
+                <DialogDescription>Use your device camera to capture an image for offline verification.</DialogDescription>
+              </DialogHeader>
+              <div className="w-full rounded-lg overflow-hidden bg-black">
+                <video
+                  id="camera-preview"
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  className="w-full h-auto"
+                />
+              </div>
+            </div>
+            <div className="sticky bottom-0 bg-background p-3 border-t flex gap-2">
+              <Button variant="outline" type="button" onClick={() => setIsCameraOpen(false)}>
+                Close
+              </Button>
+              <Button type="button" className="flex-1" onClick={handleCapturePhoto}>
+                Capture
+              </Button>
+            </div>
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="ghost" type="button" onClick={() => setIsCameraOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={handleCapturePhoto}>
-              Capture
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
