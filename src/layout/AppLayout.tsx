@@ -5,6 +5,7 @@ import {
   useState,
 } from "react";
 import {
+  Link,
   NavLink,
   Outlet,
   useLocation,
@@ -95,6 +96,21 @@ export const AppLayout = () => {
   const activeDescription = useMemo(() => {
     const active = navItems.find((item) => item.to === location.pathname);
     return active?.description ?? "Navigate through the wallet toolkit.";
+  }, [location.pathname]);
+
+  const breadcrumbSegments = useMemo(() => {
+    const segments = location.pathname.split("/").filter(Boolean);
+    if (segments.length === 0) {
+      return [{ label: "Home", to: "/" }];
+    }
+
+    return [
+      { label: "Home", to: "/" },
+      ...segments.map((segment, index) => ({
+        label: segment.charAt(0).toUpperCase() + segment.slice(1),
+        to: `/${segments.slice(0, index + 1).join("/")}`,
+      })),
+    ];
   }, [location.pathname]);
 
   const renderNavLink = (item: NavItem, isSidebar = false) => {
@@ -210,6 +226,30 @@ export const AppLayout = () => {
           <div className="rounded-xl border bg-card/60 px-4 py-3 text-sm text-muted-foreground sm:px-6">
             {activeDescription}
           </div>
+          <nav className="flex items-center gap-2 text-xs text-muted-foreground">
+            {breadcrumbSegments.map((segment, index) => {
+              const isLast = index === breadcrumbSegments.length - 1;
+              if (isLast) {
+                return (
+                  <span key={segment.to} className="font-medium text-foreground">
+                    {segment.label}
+                  </span>
+                );
+              }
+
+              return (
+                <div key={segment.to} className="flex items-center gap-2">
+                  <Link
+                    to={segment.to}
+                    className="transition-colors hover:text-foreground"
+                  >
+                    {segment.label}
+                  </Link>
+                  <span>/</span>
+                </div>
+              );
+            })}
+          </nav>
           <section className="flex flex-1 flex-col">
             <Outlet />
           </section>

@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Toaster } from "@/components/ui/toaster";
 import AppLayout from "@/layout/AppLayout";
 import { HomeScreen } from "@/screens/Home/HomeScreen";
 import { UploadScreen } from "@/screens/Upload/UploadScreen";
@@ -20,6 +21,7 @@ const App = () => {
           <Route path="settings" element={<SettingsScreen />} />
         </Route>
       </Routes>
+      <Toaster />
     </BrowserRouter>
   );
 };

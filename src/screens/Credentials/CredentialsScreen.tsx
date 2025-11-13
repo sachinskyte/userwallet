@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -5,175 +7,127 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { CredentialList } from "@/modules/credentials/components/CredentialList";
+import { useWallet } from "@/modules/wallet/hooks";
+import { formatBytes } from "@/lib/utils";
 import {
-  ArrowUpRightSquare,
-  Database,
+  Activity,
+  Archive,
+  CheckCircle,
+  ClipboardList,
   Fingerprint,
-  Network,
+  ShieldAlert,
 } from "lucide-react";
 
-const credentialSummaries = [
-  {
-    id: "cred-1",
-    title: "Government ID",
-    issuer: "Ministry of Identity",
-    status: "Active",
-    lastUpdated: "2 days ago",
-    type: "ISO mDL v1.1",
-  },
-  {
-    id: "cred-2",
-    title: "Employment Verification",
-    issuer: "Acme Labs",
-    status: "Expiring",
-    lastUpdated: "5 days ago",
-    type: "W3C VC JSON-LD",
-  },
-  {
-    id: "cred-3",
-    title: "University Diploma",
-    issuer: "Open State University",
-    status: "Active",
-    lastUpdated: "3 months ago",
-    type: "AnonCreds 1.0",
-  },
-];
-
 export const CredentialsScreen = () => {
+  const { credentials } = useWallet();
+
+  const stats = useMemo(() => {
+    const total = credentials.length;
+    const active = credentials.filter((credential) => credential.status === "active").length;
+    const expiring = credentials.filter((credential) => credential.status === "expiring").length;
+    const revoked = credentials.filter((credential) => credential.status === "revoked").length;
+    const payloadSize = credentials.reduce(
+      (acc, credential) => acc + JSON.stringify(credential).length,
+      0
+    );
+    return { total, active, expiring, revoked, payloadSize };
+  }, [credentials]);
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <CardTitle>Credential inventory</CardTitle>
+    <div className="space-y-8">
+      <Card className="bg-card/70">
+        <CardHeader className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
+            <Badge variant="secondary" className="uppercase tracking-wide">
+              Pandora&apos;s Vault credentials mesh
+            </Badge>
+            <CardTitle className="text-2xl">Verifiable credential vault</CardTitle>
             <CardDescription>
-              Review stored verifiable credentials, their issuers, and status.
+              This index tracks every credential staged locally. Use it to rehearse disclosure sets
+              before broadcasting proofs to verifiers.
             </CardDescription>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              Filter
-            </Button>
-            <Button size="sm" className="gap-2">
-              Export summary
-              <ArrowUpRightSquare className="h-4 w-4" />
-            </Button>
+          <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground sm:grid-cols-4">
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="flex items-center gap-2 text-xs uppercase tracking-wide">
+                <ClipboardList className="h-3.5 w-3.5 text-primary" />
+                Total
+              </p>
+              <p className="text-lg font-semibold text-foreground">{stats.total}</p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="flex items-center gap-2 text-xs uppercase tracking-wide">
+                <CheckCircle className="h-3.5 w-3.5 text-primary" />
+                Active
+              </p>
+              <p className="text-lg font-semibold text-foreground">{stats.active}</p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="flex items-center gap-2 text-xs uppercase tracking-wide">
+                <ShieldAlert className="h-3.5 w-3.5 text-primary" />
+                Expiring
+              </p>
+              <p className="text-lg font-semibold text-foreground">{stats.expiring}</p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="flex items-center gap-2 text-xs uppercase tracking-wide">
+                <Archive className="h-3.5 w-3.5 text-primary" />
+                Revoked
+              </p>
+              <p className="text-lg font-semibold text-foreground">{stats.revoked}</p>
+            </div>
           </div>
         </CardHeader>
-        <Separator />
-        <CardContent className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-          <ScrollArea className="h-[420px] rounded-lg border bg-card/60">
-            <div className="divide-y">
-              {credentialSummaries.map((credential) => (
-                <div key={credential.id} className="flex flex-col gap-3 p-6">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-sm font-semibold">
-                        {credential.title}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {credential.type}
-                      </p>
-                    </div>
-                    <Badge
-                      variant={
-                        credential.status === "Active" ? "secondary" : "destructive"
-                      }
-                    >
-                      {credential.status}
-                    </Badge>
-                  </div>
-                  <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-                    <div>
-                      <span className="font-medium text-foreground">Issuer</span>
-                      <p>{credential.issuer}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-foreground">Updated</span>
-                      <p>{credential.lastUpdated}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">Integrity verified</Badge>
-                    <Badge variant="outline">Revocation clean</Badge>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="sm">
-                      View details
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      Share proof
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-          <div className="space-y-4">
-            <Card className="bg-card/60">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Database className="h-4 w-4 text-primary" />
-                  Storage layers
-                </CardTitle>
-                <CardDescription>
-                  Credential materialized views and replication status.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-xs">
-                <div className="flex items-center justify-between">
-                  <span>Secure enclave</span>
-                  <Badge variant="secondary">Enabled</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Cloud mirror</span>
-                  <Badge variant="secondary">Paused</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Cold storage</span>
-                  <Badge variant="secondary">Scheduled</Badge>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-card/60">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Fingerprint className="h-4 w-4 text-primary" />
-                  Verification rules
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-xs text-muted-foreground">
-                <p>
-                  Define issuer allow lists, credential expiry policies, and
-                  automated revalidation cadence.
-                </p>
-                <Button variant="outline" size="sm">
-                  Configure policies
-                </Button>
-              </CardContent>
-            </Card>
-            <Card className="bg-card/60">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Network className="h-4 w-4 text-primary" />
-                  Connections
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  Manage DID connections and trusted relays for live proof
-                  sessions.
-                </p>
-                <Button variant="outline" size="sm">
-                  View trusted peers
-                </Button>
-              </CardContent>
-            </Card>
+        <CardContent className="grid gap-4 text-xs text-muted-foreground sm:grid-cols-3">
+          <div className="rounded-lg border bg-muted/30 p-4">
+            <p className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+              <Activity className="h-3.5 w-3.5 text-primary" />
+              Vault footprint
+            </p>
+            <p className="mt-1 text-sm text-foreground">
+              {formatBytes(stats.payloadSize)} encoded across {stats.total} records.
+            </p>
           </div>
+          <div className="rounded-lg border bg-muted/30 p-4">
+            <p className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+              <Fingerprint className="h-3.5 w-3.5 text-primary" />
+              Selective disclosure
+            </p>
+            <p className="mt-1">
+              Hidden attributes stay redacted until you explicitly reveal them in the Share module.
+            </p>
+          </div>
+          <div className="rounded-lg border bg-muted/30 p-4">
+            <p className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+              <Archive className="h-3.5 w-3.5 text-primary" />
+              Rotation hygiene
+            </p>
+            <p className="mt-1">
+              Archive revoked credentials once proofs are invalidated to reduce negotiation friction.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <CredentialList />
+
+      <Card className="bg-card/60">
+        <CardHeader>
+          <CardTitle className="text-lg">Pre-disclosure checklist</CardTitle>
+          <CardDescription>
+            Before generating a QR payload, review these notes to keep Pandora&apos;s Vault secure.
+          </CardDescription>
+        </CardHeader>
+        <Separator />
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <p>1. Confirm credential freshness — reissue those older than six months.</p>
+          <p>2. Trim attributes to the bare minimum required by the verifier schema.</p>
+          <p>
+            3. Keep revoked credentials off your share payloads to prevent correlation with older
+            sessions.
+          </p>
         </CardContent>
       </Card>
     </div>
