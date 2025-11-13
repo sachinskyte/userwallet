@@ -15,8 +15,14 @@ import { fakeDid, fakeVc } from "@/lib/fakeChain";
 
 const statusVariant: Record<string, "outline" | "secondary" | "default" | "destructive"> = {
   Submitted: "outline",
-  "Pending Verification": "default",
-  "Approved (VC Issued)": "secondary",
+  PendingVerification: "default",
+  Approved: "secondary",
+};
+
+const statusLabels: Record<string, string> = {
+  Submitted: "Submitted to issuer",
+  PendingVerification: "Offline verification pending…",
+  Approved: "VC Issued",
 };
 
 const IssuerSimulator = () => {
@@ -52,7 +58,7 @@ const IssuerSimulator = () => {
     });
 
     updateApplication(application.id, {
-      status: "Approved (VC Issued)",
+      status: "Approved",
     });
 
     toast({
@@ -91,7 +97,9 @@ const IssuerSimulator = () => {
               <div key={application.id} className="space-y-3 rounded-lg border border-border/60 bg-background/60 p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-base font-semibold text-foreground">{application.type}</h3>
-                  <Badge variant={statusVariant[application.status]}>{application.status}</Badge>
+                  <Badge variant={statusVariant[application.status]}>
+                    {statusLabels[application.status] ?? application.status}
+                  </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Submitted {new Date(application.submittedAt).toLocaleString()} · Block #{application.block}
@@ -109,10 +117,7 @@ const IssuerSimulator = () => {
                   <span>Tx {application.tx}</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button
-                    onClick={() => handleApprove(application.id)}
-                    disabled={application.status === "Approved (VC Issued)"}
-                  >
+                  <Button onClick={() => handleApprove(application.id)} disabled={application.status === "Approved"}>
                     Approve &amp; issue VC
                   </Button>
                 </div>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Card,
   CardHeader,
@@ -41,6 +41,7 @@ type FieldDefinition =
       description: string;
       helper?: string;
       placeholderValue?: string;
+      capture?: boolean;
     };
 
 type ApplicationConfig = {
@@ -70,6 +71,7 @@ const applicationConfigs: ApplicationConfig[] = [
         type: "placeholder",
         description: "Offline biometric capture scheduled · Upload support coming soon.",
         placeholderValue: "Offline capture pending",
+        capture: true,
       },
     ],
   },
@@ -108,6 +110,7 @@ const applicationConfigs: ApplicationConfig[] = [
         type: "placeholder",
         description: "Capture selfie using kiosk · Pending offline match.",
         placeholderValue: "Selfie capture pending verification",
+        capture: true,
       },
     ],
   },
@@ -175,9 +178,35 @@ type FormState = Record<string, string>;
 
 const statusVariant: Record<WalletApplication["status"], "secondary" | "outline" | "default"> = {
   Submitted: "outline",
-  "Pending Verification": "default",
-  "Approved (VC Issued)": "secondary",
+  PendingVerification: "default",
+  Approved: "secondary",
 };
+
+const statusLabels: Record<WalletApplication["status"], string> = {
+  Submitted: "Submitted to issuer",
+  PendingVerification: "Offline verification pending…",
+  Approved: "VC Issued",
+};
+
+const randomHex = (length: number) => {
+  const chars = "abcdef0123456789";
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return out;
+};
+
+const randomString = (length: number) => {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return out;
+};
+
+const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 export const ApplyScreen = () => {
   const { did, applications } = useWallet();
@@ -186,6 +215,11 @@ export const ApplyScreen = () => {
   const [formState, setFormState] = useState<FormState>({});
   const [isVerifyingId, setIsVerifyingId] = useState<string | null>(null);
   const [reviewApplication, setReviewApplication] = useState<WalletApplication | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [isCapturingForField, setIsCapturingForField] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const sortedApplications = useMemo(
     () => [...applications].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()),
@@ -202,6 +236,8 @@ export const ApplyScreen = () => {
       }
     });
     setFormState(defaults);
+    setCapturedPhoto(null);
+    setIsCapturingForField(null);
     setActiveForm(config);
   };
 
@@ -229,15 +265,31 @@ export const ApplyScreen = () => {
       }
     });
 
+    const privateKey = randomHex(64);
+    const publicKey = randomHex(64);
+    const generatedDid = `did:vault:0x${publicKey.slice(0, 16)}`;
+    const cid = `cid-${randomString(32)}`;
+    const tx = `0x${randomHex(64)}`;
+    const block = randomInt(1000, 9999);
+
     const record = addApplication({
       type: activeForm.title,
       subjectDid: did ?? null,
       fields,
+      photo: capturedPhoto,
+      privateKey,
+      publicKey,
+      did: generatedDid,
+      cid,
+      tx,
+      block,
     });
+
+    updateApplication(record.id, { status: "PendingVerification" });
 
     toast({
       title: "Application submitted to issuer node",
-      description: `Tracking hash ${record.tx.slice(0, 10)}… anchored on simulated chain.`,
+      description: `Tracking hash ${tx.slice(0, 10)}… anchored on simulated chain.`,
     });
 
     setActiveForm(null);
@@ -262,9 +314,65 @@ export const ApplyScreen = () => {
         title: "Generating zero-knowledge proof…",
         description: "Proof ready for issuer validation.",
       });
-      updateApplication(application.id, { status: "Pending Verification" });
+      updateApplication(application.id, { status: "PendingVerification" });
       setIsVerifyingId(null);
     }, 1600);
+  };
+
+  useEffect(() => {
+    if (!isCameraOpen) {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      return;
+    }
+
+    const setupCamera = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+        streamRef.current = stream;
+      } catch (error) {
+        console.error("Camera access denied", error);
+        toast({
+          title: "Camera permission needed",
+          description: "Unable to access camera. Please allow camera access and try again.",
+          variant: "destructive",
+        });
+        setIsCameraOpen(false);
+      }
+    };
+
+    setupCamera();
+
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+    };
+  }, [isCameraOpen, toast]);
+
+  const handleCapturePhoto = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    if (video.videoWidth === 0 || video.videoHeight === 0) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/png");
+    setCapturedPhoto(dataUrl);
+    setIsCameraOpen(false);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
   };
 
   return (
@@ -330,7 +438,9 @@ export const ApplyScreen = () => {
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-semibold text-foreground">{application.type}</p>
-                      <Badge variant={statusVariant[application.status]}>{application.status}</Badge>
+                      <Badge variant={statusVariant[application.status]}>
+                        {statusLabels[application.status] ?? application.status}
+                      </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Submitted {new Date(application.submittedAt).toLocaleString()}
@@ -340,6 +450,16 @@ export const ApplyScreen = () => {
                       <span className="font-mono">Tx {application.tx.slice(0, 10)}…</span>
                       <span className="font-mono">Block #{application.block}</span>
                     </div>
+                    {application.photo && (
+                      <div className="mt-2 flex items-center gap-3">
+                        <img
+                          src={application.photo}
+                          alt={`${application.type} capture`}
+                          className="h-12 w-12 rounded-md border object-cover"
+                        />
+                        <span className="text-xs text-muted-foreground">Capture stored locally</span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button
@@ -387,13 +507,36 @@ export const ApplyScreen = () => {
               <div className="space-y-4">
                 {activeForm.fields.map((field) => {
                   if (field.type === "placeholder") {
+                    const showCapturePreview = field.capture && capturedPhoto && isCapturingForField === field.name;
                     return (
                       <div
                         key={field.name}
                         className="rounded-lg border border-dashed border-muted bg-muted/20 p-4 text-sm text-muted-foreground"
                       >
-                        <p className="font-medium text-foreground">{field.label}</p>
-                        <p className="text-xs text-muted-foreground/80">{field.description}</p>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="font-medium text-foreground">{field.label}</p>
+                            <p className="text-xs text-muted-foreground/80">{field.description}</p>
+                          </div>
+                          {field.capture && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setIsCapturingForField(field.name);
+                                setIsCameraOpen(true);
+                              }}
+                            >
+                              {capturedPhoto && isCapturingForField === field.name ? "Retake" : "Open camera"}
+                            </Button>
+                          )}
+                        </div>
+                        {showCapturePreview && (
+                          <div className="mt-3 overflow-hidden rounded-md border bg-background/80">
+                            <img src={capturedPhoto} alt="Captured preview" className="w-full object-cover" />
+                          </div>
+                        )}
                       </div>
                     );
                   }
@@ -484,6 +627,26 @@ export const ApplyScreen = () => {
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCameraOpen} onOpenChange={(open) => setIsCameraOpen(open)}>
+        <DialogContent className="max-w-lg space-y-4">
+          <DialogHeader>
+            <DialogTitle>Capture photo</DialogTitle>
+            <DialogDescription>Use your device camera to capture an image for offline verification.</DialogDescription>
+          </DialogHeader>
+          <div className="overflow-hidden rounded-lg border bg-black">
+            <video ref={videoRef} autoPlay playsInline className="w-full" />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" type="button" onClick={() => setIsCameraOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleCapturePhoto}>
+              Capture
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

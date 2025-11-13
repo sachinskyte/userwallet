@@ -45,7 +45,7 @@ export type RecoveryShare = {
   note?: string;
 };
 
-export type ApplicationStatus = "Submitted" | "Pending Verification" | "Approved (VC Issued)";
+export type ApplicationStatus = "Submitted" | "PendingVerification" | "Approved";
 
 export type WalletApplication = {
   id: string;
@@ -57,6 +57,10 @@ export type WalletApplication = {
   tx: string;
   block: number;
   status: ApplicationStatus;
+  photo?: string | null;
+  privateKey?: string;
+  publicKey?: string;
+  did?: string;
 };
 
 type WalletState = {
@@ -319,10 +323,14 @@ export const useWalletStore = create<WalletStore>()(
             subjectDid: input.subjectDid,
             fields: input.fields,
             submittedAt: new Date().toISOString(),
-            cid: fakeCid(),
-            tx: fakeTxHash(),
-            block: fakeBlockNumber(),
+            cid: input.cid ?? fakeCid(),
+            tx: input.tx ?? fakeTxHash(),
+            block: input.block ?? fakeBlockNumber(),
             status: input.status ?? "Submitted",
+            photo: input.photo ?? null,
+            privateKey: input.privateKey,
+            publicKey: input.publicKey,
+            did: input.did,
           };
 
           set({
