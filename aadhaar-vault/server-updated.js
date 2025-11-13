@@ -11,8 +11,7 @@ const RPC = process.env.RPC_URL || "http://127.0.0.1:8545";
 const RELAYER_PRIVATE_KEY = (process.env.RELAYER_PRIVATE_KEY || "").trim();
 const ADMIN_PRIVATE_KEY = (process.env.ADMIN_PRIVATE_KEY || "").trim();
 const CONTRACT_ADDRESS = (process.env.CONTRACT_ADDRESS || "").trim();
-// Always use port 3001 to match frontend configuration
-const PORT = 3001;
+const PORT = process.env.PORT || 3001; // Changed to 3001 to match frontend
 
 if (!CONTRACT_ADDRESS) {
   console.error("Set CONTRACT_ADDRESS in .env (deployed contract address)");
@@ -60,14 +59,6 @@ app.post("/api/apply", async (req, res) => {
   try {
     const { did, name, dob, address, photo, type } = req.body;
     
-    console.log("\n=== AADHAAR APPLICATION SUBMISSION ===");
-    console.log("DID:", did);
-    console.log("Name:", name);
-    console.log("DOB:", dob);
-    console.log("Address:", address);
-    console.log("Type:", type || "AADHAAR_APPLICATION");
-    console.log("Photo provided:", !!photo);
-    
     if (!did || !name || !dob || !address) {
       return res.status(400).json({ 
         success: false,
@@ -78,7 +69,6 @@ app.post("/api/apply", async (req, res) => {
     // Create identifier from DID
     const identifier = did;
     const recordId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(identifier + name + dob));
-    console.log("Generated Record ID:", recordId);
 
     // Prepare application data
     const applicationData = {
@@ -93,7 +83,6 @@ app.post("/api/apply", async (req, res) => {
     // Save photo if provided
     let cid = null;
     if (photo) {
-      console.log("Processing photo...");
       // Remove data URL prefix if present
       const base64Data = photo.replace(/^data:image\/\w+;base64,/, '');
       const photoBuffer = Buffer.from(base64Data, 'base64');
@@ -101,35 +90,18 @@ app.post("/api/apply", async (req, res) => {
       const filename = path.join(UPLOADS_DIR, hash.replace(/^0x/, "") + ".enc");
       fs.writeFileSync(filename, photoBuffer);
       cid = "local:" + path.basename(filename);
-      console.log("Photo saved:", cid);
     }
 
-    // Hash the application data for blockchain storage
-    // IMPORTANT: Only the hash is stored on-chain, not the actual data
-    // This ensures privacy while providing proof of submission
+    // Create encrypted data (for demo, we'll just hash the application data)
+    // In production, encrypt this properly
     const applicationJson = JSON.stringify(applicationData);
     const encryptedHex = "0x" + Buffer.from(applicationJson).toString('hex');
     const hash = ethers.utils.keccak256(encryptedHex);
-    console.log("Application data hash (stored on blockchain):", hash);
-    console.log("Note: Only hash is stored on-chain, actual data remains private");
 
     // Submit to blockchain
     const cidLike = cid || "local:no-photo";
-    console.log("\n--- BLOCKCHAIN SUBMISSION ---");
-    console.log("Submitting to contract:", CONTRACT_ADDRESS);
-    console.log("Record ID:", recordId);
-    console.log("Hash:", hash);
-    console.log("CID:", cidLike);
-    
     const tx = await contract.submitApplication(recordId, hash, cidLike, { gasLimit: 300000 });
-    console.log("Transaction sent! Hash:", tx.hash);
-    console.log("Waiting for confirmation...");
-    
     const receipt = await tx.wait();
-    console.log("✅ Transaction confirmed!");
-    console.log("Block number:", receipt.blockNumber);
-    console.log("Gas used:", receipt.gasUsed.toString());
-    console.log("--- END BLOCKCHAIN SUBMISSION ---\n");
 
     // Store application in memory (keyed by DID)
     const application = {
@@ -150,9 +122,6 @@ app.post("/api/apply", async (req, res) => {
       applicationsStore.set(did, []);
     }
     applicationsStore.get(did).push(application);
-    console.log("Application stored in memory for DID:", did);
-    console.log("Total applications for this DID:", applicationsStore.get(did).length);
-    console.log("=== END APPLICATION SUBMISSION ===\n");
 
     return res.json({
       success: true,
@@ -162,8 +131,7 @@ app.post("/api/apply", async (req, res) => {
     });
 
   } catch (e) {
-    console.error("\n❌ ERROR in /api/apply:", e);
-    console.error("Stack:", e.stack);
+    console.error("Error in /api/apply:", e);
     return res.status(500).json({ 
       success: false,
       error: e.message || String(e) 
@@ -182,15 +150,10 @@ app.get("/api/applications", async (req, res) => {
       return res.status(400).json({ error: "did query parameter required" });
     }
 
-    console.log("\n=== FETCHING APPLICATIONS ===");
-    console.log("DID:", did);
-    
     const apps = applicationsStore.get(did) || [];
-    console.log("Found", apps.length, "applications in memory");
     
     // Also check blockchain for any additional applications
     // For now, return in-memory store
-    console.log("=== END FETCH ===\n");
     return res.json(apps);
 
   } catch (e) {
@@ -210,17 +173,14 @@ app.get("/api/status", async (req, res) => {
       return res.status(400).json({ error: "tx query parameter required" });
     }
 
-    console.log("Checking transaction status:", txHash);
     const receipt = await provider.getTransactionReceipt(txHash);
     
     if (receipt && receipt.blockNumber) {
-      console.log("✅ Transaction confirmed at block:", receipt.blockNumber);
       return res.json({
         confirmed: true,
         blockNumber: receipt.blockNumber
       });
     } else {
-      console.log("⏳ Transaction not yet confirmed");
       return res.json({
         confirmed: false
       });
@@ -325,3 +285,4 @@ app.listen(PORT, () => {
   console.log("  GET  /api/applications?did=<did>");
   console.log("  GET  /api/status?tx=<txHash>");
 });
+

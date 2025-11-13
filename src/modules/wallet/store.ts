@@ -485,6 +485,23 @@ export const useWalletStore = create<WalletStore>()(
       partialize: (state) => ({
         wallet: state.wallet,
       }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as WalletStore;
+        // Ensure arrays are always initialized
+        return {
+          ...currentState,
+          wallet: {
+            ...currentState.wallet,
+            ...persisted.wallet,
+            applications: Array.isArray(persisted.wallet?.applications) ? persisted.wallet.applications : [],
+            requests: Array.isArray(persisted.wallet?.requests) ? persisted.wallet.requests : [],
+            approvedRequests: Array.isArray(persisted.wallet?.approvedRequests) ? persisted.wallet.approvedRequests : [],
+            documents: Array.isArray(persisted.wallet?.documents) ? persisted.wallet.documents : [],
+            credentials: Array.isArray(persisted.wallet?.credentials) ? persisted.wallet.credentials : currentState.wallet.credentials,
+            shares: Array.isArray(persisted.wallet?.shares) ? persisted.wallet.shares : [],
+          },
+        };
+      },
     }
   )
 );

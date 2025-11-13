@@ -18,6 +18,12 @@ import { useWallet, useWalletActions } from "@/modules/wallet/hooks";
 import type { WalletApplication } from "@/modules/wallet/store";
 import { Fingerprint, IdCard, FileSignature, Camera, BadgeCheck, Clock, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  submitAadhaarApplication,
+  getApplicationsForDid,
+  getApplicationStatus,
+  type BackendApplication,
+} from "@/lib/api";
 
 type FieldDefinition =
   | {
@@ -220,11 +226,41 @@ export const ApplyScreen = () => {
   const [isCapturingForField, setIsCapturingForField] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  
+  // Backend integration state
+  const [isSubmittingToBackend, setIsSubmittingToBackend] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState<string | null>(null);
+  const [backendApplications, setBackendApplications] = useState<BackendApplication[]>([]);
+  const [isLoadingBackendApps, setIsLoadingBackendApps] = useState(false);
+  const [lastTransactionHash, setLastTransactionHash] = useState<string | null>(null);
 
   const sortedApplications = useMemo(
-    () => [...applications].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()),
+    () => {
+      const apps = Array.isArray(applications) ? applications : [];
+      return [...apps].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+    },
     [applications]
   );
+
+  // Fetch applications from backend when DID is available
+  useEffect(() => {
+    const fetchBackendApplications = async () => {
+      if (!did) return;
+      
+      setIsLoadingBackendApps(true);
+      try {
+        const apps = await getApplicationsForDid(did);
+        setBackendApplications(apps);
+      } catch (error) {
+        console.warn("Could not fetch applications from backend:", error);
+        // Silently fail - backend might not be running
+      } finally {
+        setIsLoadingBackendApps(false);
+      }
+    };
+
+    fetchBackendApplications();
+  }, [did]);
 
   const handleOpenForm = (config: ApplicationConfig) => {
     const defaults: FormState = {};
@@ -248,9 +284,17 @@ export const ApplyScreen = () => {
     }));
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!activeForm) return;
+    if (!did) {
+      toast({
+        title: "Wallet not connected",
+        description: "Please login with MetaMask first to submit applications.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const fields: Record<string, string> = {};
     activeForm.fields.forEach((field) => {
@@ -265,34 +309,106 @@ export const ApplyScreen = () => {
       }
     });
 
-    const privateKey = randomHex(64);
-    const publicKey = randomHex(64);
-    const generatedDid = `did:vault:0x${publicKey.slice(0, 16)}`;
-    const cid = `cid-${randomString(32)}`;
-    const tx = `0x${randomHex(64)}`;
-    const block = randomInt(1000, 9999);
+    // Check if this is an Aadhaar application (backend integration)
+    const isAadhaarApp = activeForm.key === "aadhaar";
+    
+    if (isAadhaarApp) {
+      // Submit to backend
+      setIsSubmittingToBackend(true);
+      setSubmissionStatus("Submitting application to Aadhaar Vault backend...");
 
-    const submittedAt = Date.now();
-    const record = addApplication({
-      type: activeForm.title,
-      subjectDid: did ?? null,
-      fields,
-      photo: capturedPhoto,
-      privateKey,
-      publicKey,
-      did: generatedDid,
-      cid,
-      tx,
-      block,
-      submittedAt,
-    });
+      try {
+        const payload = {
+          did,
+          name: fields.fullName || "",
+          dob: fields.dateOfBirth || "",
+          address: fields.address || "",
+          photo: capturedPhoto || null,
+          type: "AADHAAR_APPLICATION",
+        };
 
-    updateApplication(record.id, { status: "PendingVerification" });
+        const response = await submitAadhaarApplication(payload);
 
-    toast({
-      title: "Application submitted to issuer node",
-      description: `Tracking hash ${tx.slice(0, 10)}… anchored on simulated chain.`,
-    });
+        if (response.success && response.txHash) {
+          setLastTransactionHash(response.txHash);
+          setSubmissionStatus(`Submitted. Transaction: ${response.txHash}`);
+          
+          // Poll for transaction confirmation
+          let attempts = 0;
+          const maxAttempts = 20;
+          while (attempts < maxAttempts) {
+            attempts++;
+            setSubmissionStatus(`Waiting for chain confirmation... (attempt ${attempts}/${maxAttempts})`);
+            
+            try {
+              const status = await getApplicationStatus(response.txHash);
+              if (status.confirmed) {
+                setSubmissionStatus(`Confirmed on chain at block ${status.blockNumber || "N/A"}. Application stored. Transaction: ${response.txHash}`);
+                break;
+              }
+            } catch (err) {
+              console.warn("Status check failed:", err);
+            }
+            
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+          }
+
+          // Refresh backend applications list
+          const apps = await getApplicationsForDid(did);
+          setBackendApplications(apps);
+
+          toast({
+            title: "Application submitted successfully",
+            description: `Transaction: ${response.txHash.slice(0, 10)}…`,
+          });
+        } else {
+          throw new Error(response.error || "Submission failed");
+        }
+      } catch (error: any) {
+        console.error("Backend submission error:", error);
+        const errorMessage = error.response?.data?.error || error.message || "Unknown error";
+        setSubmissionStatus(`Error: ${errorMessage}`);
+        toast({
+          title: "Submission failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } finally {
+        setIsSubmittingToBackend(false);
+        // Keep status message visible for a few seconds
+        setTimeout(() => setSubmissionStatus(null), 5000);
+      }
+    } else {
+      // For non-Aadhaar applications, use local/fake chain
+      const privateKey = randomHex(64);
+      const publicKey = randomHex(64);
+      const generatedDid = `did:vault:0x${publicKey.slice(0, 16)}`;
+      const cid = `cid-${randomString(32)}`;
+      const tx = `0x${randomHex(64)}`;
+      const block = randomInt(1000, 9999);
+
+      const submittedAt = Date.now();
+      const record = addApplication({
+        type: activeForm.title,
+        subjectDid: did ?? null,
+        fields,
+        photo: capturedPhoto,
+        privateKey,
+        publicKey,
+        did: generatedDid,
+        cid,
+        tx,
+        block,
+        submittedAt,
+      });
+
+      updateApplication(record.id, { status: "PendingVerification" });
+
+      toast({
+        title: "Application submitted to issuer node",
+        description: `Tracking hash ${tx.slice(0, 10)}… anchored on simulated chain.`,
+      });
+    }
 
     setActiveForm(null);
   };
@@ -428,6 +544,92 @@ export const ApplyScreen = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Backend submission status with blockchain transaction hash */}
+      {submissionStatus && (
+        <Card className="bg-card/80 border-primary/20">
+          <CardContent className="pt-6 space-y-4">
+            <div className="flex items-center gap-2">
+              {isSubmittingToBackend && <Loader2 className="h-4 w-4 animate-spin" />}
+              <p className="text-sm text-muted-foreground">{submissionStatus}</p>
+            </div>
+            {/* Display transaction hash if available */}
+            {lastTransactionHash && (
+              <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                    Blockchain Transaction Hash
+                  </p>
+                  <p className="font-mono text-sm break-all text-foreground bg-background/60 p-3 rounded border">
+                    {lastTransactionHash}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">
+                    <strong>What happened:</strong> Your application data (name, DOB, address, photo) has been hashed using Keccak256 and the hash has been permanently stored on the blockchain.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Privacy:</strong> Only the hash is stored on-chain, not your actual data. This transaction hash is your immutable proof of submission.
+                  </p>
+                </div>
+              </div>
+            )}
+            {submissionStatus.includes("Confirmed on chain") && (
+              <div className="rounded-lg border border-green-500/20 bg-green-500/10 p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <BadgeCheck className="h-4 w-4 text-green-600" />
+                  <p className="text-sm font-semibold text-green-700 dark:text-green-400">
+                    Application Stored on Blockchain
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Your application hash has been permanently recorded on the blockchain. The transaction is immutable and verifiable.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Backend applications (Aadhaar) */}
+      {backendApplications.length > 0 && (
+        <Card className="bg-card/80 border-primary/40">
+          <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <CardTitle className="text-xl">Backend Applications (Aadhaar)</CardTitle>
+              <CardDescription>Applications stored on-chain via Aadhaar Vault backend.</CardDescription>
+            </div>
+            <Badge variant="outline">{backendApplications.length} stored</Badge>
+          </CardHeader>
+          <Separator />
+          <CardContent className="space-y-4 pt-4">
+            {backendApplications.map((app) => (
+              <div
+                key={app.id || app.txHash}
+                className="flex flex-col gap-3 rounded-lg border border-border/60 bg-background/60 p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold text-foreground">{app.type}</p>
+                    <Badge variant="outline">{app.status || "Submitted"}</Badge>
+                  </div>
+                  <p className="text-sm font-medium">{app.name}</p>
+                  {app.txHash && (
+                    <p className="text-xs font-mono text-muted-foreground">
+                      Tx: {app.txHash.slice(0, 16)}…
+                    </p>
+                  )}
+                  {app.cid && (
+                    <p className="text-xs font-mono text-muted-foreground">
+                      CID: {app.cid.slice(0, 16)}…
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="bg-card/80">
         <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -607,8 +809,15 @@ export const ApplyScreen = () => {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" className="flex-1">
-                    Submit application
+                  <Button type="submit" className="flex-1" disabled={isSubmittingToBackend}>
+                    {isSubmittingToBackend ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Submitting...
+                      </span>
+                    ) : (
+                      "Submit application"
+                    )}
                   </Button>
                 </div>
               </div>
