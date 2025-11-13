@@ -144,9 +144,9 @@ export const HomeScreen = () => {
               </CardDescription>
             </div>
             <Button variant="outline" className="gap-2" asChild>
-              <a href="/upload">
+              <a href="/apply">
                 <CloudUpload className="h-4 w-4" />
-                Queue new upload
+                Start new application
               </a>
             </Button>
           </CardHeader>

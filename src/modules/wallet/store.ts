@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
+import { fakeCid, fakeTxHash, fakeBlockNumber } from "@/lib/fakeChain";
 
 export type DocumentStatus = "pending" | "encrypted" | "uploaded" | "failed";
 
@@ -32,6 +33,7 @@ export type WalletCredential = {
     disclosed?: boolean;
   }>;
   proofHash?: string;
+  rawVc?: unknown;
 };
 
 export type RecoveryShare = {
@@ -43,12 +45,27 @@ export type RecoveryShare = {
   note?: string;
 };
 
+export type ApplicationStatus = "Submitted" | "Pending Verification" | "Approved (VC Issued)";
+
+export type WalletApplication = {
+  id: string;
+  type: string;
+  subjectDid: string | null;
+  submittedAt: string;
+  fields: Record<string, string>;
+  cid: string;
+  tx: string;
+  block: number;
+  status: ApplicationStatus;
+};
+
 type WalletState = {
   did: string | null;
   didCreatedAt?: string;
   documents: WalletDocument[];
   credentials: WalletCredential[];
   shares: RecoveryShare[];
+  applications: WalletApplication[];
 };
 
 type WalletActions = {
@@ -75,6 +92,11 @@ type WalletActions = {
     matchedShares: RecoveryShare[];
     missing: number;
   };
+  addApplication: (input: Omit<WalletApplication, "id" | "submittedAt" | "cid" | "tx" | "block" | "status"> & {
+    id?: string;
+    status?: ApplicationStatus;
+  }) => WalletApplication;
+  updateApplication: (id: string, patch: Partial<WalletApplication>) => void;
 };
 
 type WalletStore = {
@@ -136,6 +158,7 @@ const initialState: WalletState = {
   documents: [],
   credentials: initialCredentials,
   shares: [],
+  applications: [],
 };
 
 export const useWalletStore = create<WalletStore>()(
@@ -224,6 +247,7 @@ export const useWalletStore = create<WalletStore>()(
             description: credentialInput.description,
             attributes: credentialInput.attributes,
             proofHash: credentialInput.proofHash ?? uuidv4().replace(/-/g, "").slice(0, 24),
+            rawVc: credentialInput.rawVc,
           };
 
           set({
@@ -286,6 +310,45 @@ export const useWalletStore = create<WalletStore>()(
             matchedShares,
             missing: Math.max(0, threshold - matchedShares.length),
           };
+        },
+        addApplication: (input) => {
+          const { wallet } = get();
+          const record: WalletApplication = {
+            id: input.id ?? uuidv4(),
+            type: input.type,
+            subjectDid: input.subjectDid,
+            fields: input.fields,
+            submittedAt: new Date().toISOString(),
+            cid: fakeCid(),
+            tx: fakeTxHash(),
+            block: fakeBlockNumber(),
+            status: input.status ?? "Submitted",
+          };
+
+          set({
+            wallet: {
+              ...wallet,
+              applications: [record, ...wallet.applications],
+            },
+          });
+
+          return record;
+        },
+        updateApplication: (id, patch) => {
+          const { wallet } = get();
+          set({
+            wallet: {
+              ...wallet,
+              applications: wallet.applications.map((application) =>
+                application.id === id
+                  ? {
+                      ...application,
+                      ...patch,
+                    }
+                  : application
+              ),
+            },
+          });
         },
       },
     }),

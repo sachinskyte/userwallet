@@ -12,53 +12,62 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/components/ui/use-toast";
 import { CredentialCard } from "@/modules/credentials/components/CredentialCard";
 import { useWallet, useWalletActions } from "@/modules/wallet/hooks";
-import type { WalletCredential } from "@/modules/wallet/store";
+import type { CredentialStatus } from "@/modules/wallet/store";
 import { PlusCircle, RefreshCw } from "lucide-react";
+import { fakeDid, fakeVc } from "@/lib/fakeChain";
 
-const credentialArchetypes: Array<Omit<WalletCredential, "id" | "issuanceDate">> = [
+type CredentialField = {
+  label: string;
+  value: string;
+  disclosed?: boolean;
+};
+
+type CredentialTemplate = {
+  title: string;
+  type: string;
+  status: CredentialStatus;
+  description: string;
+  fields: CredentialField[];
+};
+
+const credentialTemplates: CredentialTemplate[] = [
   {
     title: "Orbital Dock Access",
-    issuer: "Atlas Station Authority",
     type: "W3C VC JSON-LD",
     status: "active",
     description: "Proof of docking clearance for Pandora's Vault logistics pods.",
-    attributes: [
+    fields: [
       { label: "Dock ID", value: "AT-9941", disclosed: true },
       { label: "Window", value: "08:00 - 12:00 UTC", disclosed: true },
       { label: "Security Tier", value: "Gamma", disclosed: false },
     ],
-    proofHash: "",
   },
   {
     title: "Research Residency",
-    issuer: "Helios Research Cooperative",
     type: "AnonCreds 1.0",
     status: "active",
     description: "Credential proving temporary residence within the Helios lab cluster.",
-    attributes: [
+    fields: [
       { label: "Resident", value: "Avery Quinn", disclosed: true },
       { label: "Wing", value: "Nova-7", disclosed: true },
       { label: "Lab clearance", value: "BioSec-3", disclosed: false },
     ],
-    proofHash: "",
   },
   {
     title: "Vault Guardian Oath",
-    issuer: "Guild of Guardians",
     type: "DIDComm attestation",
     status: "expiring",
     description: "Annual oath credential ensuring guardian compliance with vault governance.",
-    attributes: [
+    fields: [
       { label: "Rank", value: "Sentinel", disclosed: true },
       { label: "Cycle", value: "2245-Q4", disclosed: true },
       { label: "Oath token", value: "OATH-99AL", disclosed: false },
     ],
-    proofHash: "",
   },
 ];
 
 export const CredentialList = () => {
-  const { credentials } = useWallet();
+  const { credentials, did } = useWallet();
   const { addCredential, removeCredential } = useWalletActions();
 
   const sortedCredentials = useMemo(
@@ -70,11 +79,27 @@ export const CredentialList = () => {
   );
 
   const handleInjectCredential = () => {
-    const template = credentialArchetypes[Math.floor(Math.random() * credentialArchetypes.length)];
+    const template = credentialTemplates[Math.floor(Math.random() * credentialTemplates.length)];
+    const issuerDid = fakeDid();
+    const subjectDid = did ?? fakeDid();
+
+    const subjectFields = template.fields.reduce<Record<string, string>>((acc, field) => {
+      const key = field.label.toLowerCase().replace(/\s+/g, "_");
+      acc[key] = field.value;
+      return acc;
+    }, {});
+
+    const vc = fakeVc(issuerDid, subjectDid, subjectFields);
+
     const record = addCredential({
-      ...template,
+      title: template.title,
+      issuer: issuerDid,
+      type: template.type,
       status: template.status,
-      proofHash: crypto.randomUUID().replace(/-/g, "").slice(0, 24),
+      description: template.description,
+      attributes: template.fields,
+      proofHash: vc.proof?.jws?.slice(2, 26) ?? undefined,
+      rawVc: vc,
     });
     toast({
       title: "Mock credential added",

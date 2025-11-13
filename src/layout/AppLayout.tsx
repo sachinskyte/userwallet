@@ -35,9 +35,9 @@ import {
   ShieldCheck,
   Sun,
   Moon,
-  UploadCloud,
   Wallet2,
   QrCode,
+  FileSignature,
 } from "lucide-react";
 
 type NavItem = {
@@ -55,10 +55,10 @@ const navItems: NavItem[] = [
     description: "Overview of your Pandora's Vault command center.",
   },
   {
-    label: "Upload",
-    to: "/upload",
-    icon: UploadCloud,
-    description: "Import vault backups, DIDs, or identity documents.",
+    label: "Apply",
+    to: "/apply",
+    icon: FileSignature,
+    description: "Request high-trust identity credentials via simulated issuer nodes.",
   },
   {
     label: "Credentials",
