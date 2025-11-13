@@ -8,7 +8,7 @@ export function fakeHex(length = 40) {
   return out;
 }
 
-export function fakeCid() {
+export function fakeCid(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz234567";
   let cid = "bafy";
   for (let i = 0; i < 54; i++) cid += chars[Math.floor(Math.random() * chars.length)];
@@ -19,11 +19,11 @@ export function fakeDid() {
   return `did:ethr:matic:${fakeHex(40)}`;
 }
 
-export function fakeTxHash() {
+export function fakeTxHash(): string {
   return `0x${fakeHex(64)}`;
 }
 
-export function fakeBlockNumber() {
+export function fakeBlockNumber(): number {
   return Math.floor(1_000_000 + Math.random() * 9_000_000);
 }
 

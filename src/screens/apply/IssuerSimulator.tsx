@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
 import { useWallet, useWalletActions } from "@/modules/wallet/hooks";
-import { fakeDid, fakeVc } from "@/lib/fakeChain";
+import { fakeDid, fakeVc, fakeCid, fakeTxHash, fakeBlockNumber, fakeHex } from "@/lib/fakeChain";
 
 const statusVariant: Record<string, "outline" | "secondary" | "default" | "destructive"> = {
   Submitted: "outline",
@@ -41,6 +41,18 @@ const IssuerSimulator = () => {
     const issuerDid = fakeDid();
     const subjectDid = application.subjectDid ?? did ?? fakeDid();
     const vc = fakeVc(issuerDid, subjectDid, application.fields);
+    const vcCid = vc.evidence?.cid ?? fakeCid();
+    const vcTx = vc.evidence?.chainTx ?? fakeTxHash();
+    const vcBlock = vc.evidence?.block ?? fakeBlockNumber();
+    const vcObject = {
+      cid: vcCid,
+      tx: vcTx,
+      block: vcBlock,
+      vcId: vc.proof?.jws ?? fakeHex(64),
+      issuerDID: issuerDid,
+      subjectDID: subjectDid,
+      issuedAt: vc.issuanceDate ?? new Date().toISOString(),
+    };
 
     addCredential({
       title: application.type,
@@ -59,11 +71,15 @@ const IssuerSimulator = () => {
 
     updateApplication(application.id, {
       status: "Approved",
+      cid: application.cid ?? vcCid,
+      tx: application.tx ?? vcTx,
+      block: application.block ?? vcBlock,
+      vc: vcObject,
     });
 
     toast({
       title: "Credential issued",
-      description: `VC anchored with tx ${vc.evidence?.chainTx?.slice(0, 10)}…`,
+      description: `VC anchored with tx ${vcTx.slice(0, 10)}…`,
     });
   };
 

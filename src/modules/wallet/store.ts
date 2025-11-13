@@ -45,22 +45,33 @@ export type RecoveryShare = {
   note?: string;
 };
 
+export interface VCObject {
+  cid: string;
+  tx: string;
+  block: number;
+  vcId: string;
+  issuerDID: string;
+  subjectDID: string;
+  issuedAt: string;
+}
+
 export type ApplicationStatus = "Submitted" | "PendingVerification" | "Approved";
 
 export type WalletApplication = {
   id: string;
   type: string;
   subjectDid: string | null;
-  submittedAt: string;
+  submittedAt: number;
   fields: Record<string, string>;
-  cid: string;
-  tx: string;
-  block: number;
+  cid?: string;
+  tx?: string;
+  block?: number;
   status: ApplicationStatus;
   photo?: string | null;
   privateKey?: string;
   publicKey?: string;
   did?: string;
+  vc?: VCObject | null;
 };
 
 type WalletState = {
@@ -75,6 +86,7 @@ type WalletState = {
 type WalletActions = {
   generateDid: (force?: boolean) => string;
   setDid: (did: string | null) => void;
+  logout: () => void;
   addDocument: (
     document: Omit<WalletDocument, "id" | "uploadedAt" | "status"> & {
       id?: string;
@@ -96,7 +108,7 @@ type WalletActions = {
     matchedShares: RecoveryShare[];
     missing: number;
   };
-  addApplication: (input: Omit<WalletApplication, "id" | "submittedAt" | "cid" | "tx" | "block" | "status"> & {
+  addApplication: (input: Omit<WalletApplication, "id" | "status"> & {
     id?: string;
     status?: ApplicationStatus;
   }) => WalletApplication;
@@ -196,6 +208,17 @@ export const useWalletStore = create<WalletStore>()(
               ...wallet,
               did,
               didCreatedAt: did ? new Date().toISOString() : undefined,
+            },
+          });
+        },
+        logout: () => {
+          const { wallet } = get();
+          set({
+            wallet: {
+              ...wallet,
+              did: null,
+              didCreatedAt: undefined,
+              applications: [],
             },
           });
         },
@@ -322,15 +345,16 @@ export const useWalletStore = create<WalletStore>()(
             type: input.type,
             subjectDid: input.subjectDid,
             fields: input.fields,
-            submittedAt: new Date().toISOString(),
-            cid: input.cid ?? fakeCid(),
-            tx: input.tx ?? fakeTxHash(),
-            block: input.block ?? fakeBlockNumber(),
+            submittedAt: input.submittedAt ?? Date.now(),
+            cid: input.cid,
+            tx: input.tx,
+            block: input.block,
             status: input.status ?? "Submitted",
             photo: input.photo ?? null,
             privateKey: input.privateKey,
             publicKey: input.publicKey,
             did: input.did,
+            vc: input.vc ?? null,
           };
 
           set({
@@ -352,6 +376,11 @@ export const useWalletStore = create<WalletStore>()(
                   ? {
                       ...application,
                       ...patch,
+                      submittedAt: patch.submittedAt ?? application.submittedAt,
+                      cid: patch.cid ?? application.cid,
+                      tx: patch.tx ?? application.tx,
+                      block: patch.block ?? application.block,
+                      vc: patch.vc ?? application.vc,
                     }
                   : application
               ),

@@ -9,6 +9,7 @@ import {
   NavLink,
   Outlet,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 import {
   Badge,
@@ -26,6 +27,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
+import { useWalletActions } from "@/modules/wallet/hooks";
 import {
   Home,
   IdCard,
@@ -88,8 +90,10 @@ const navItems: NavItem[] = [
 
 export const AppLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { logout } = useWalletActions();
 
   const isDark = theme === "dark";
 
@@ -171,6 +175,16 @@ export const AppLayout = () => {
                 aria-label="Toggle theme"
               />
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                logout();
+                navigate("/welcome", { replace: true });
+              }}
+            >
+              Logout
+            </Button>
             <Sheet open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" size="icon" className="md:hidden">

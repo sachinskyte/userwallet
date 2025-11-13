@@ -272,6 +272,7 @@ export const ApplyScreen = () => {
     const tx = `0x${randomHex(64)}`;
     const block = randomInt(1000, 9999);
 
+    const submittedAt = Date.now();
     const record = addApplication({
       type: activeForm.title,
       subjectDid: did ?? null,
@@ -283,6 +284,7 @@ export const ApplyScreen = () => {
       cid,
       tx,
       block,
+      submittedAt,
     });
 
     updateApplication(record.id, { status: "PendingVerification" });
@@ -459,9 +461,11 @@ export const ApplyScreen = () => {
                       Submitted {new Date(application.submittedAt).toLocaleString()}
                     </p>
                     <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground/80">
-                      <span className="font-mono">CID {application.cid.slice(0, 8)}…</span>
-                      <span className="font-mono">Tx {application.tx.slice(0, 10)}…</span>
-                      <span className="font-mono">Block #{application.block}</span>
+                      {application.cid && <span className="font-mono">CID {application.cid.slice(0, 8)}…</span>}
+                      {application.tx && <span className="font-mono">Tx {application.tx.slice(0, 10)}…</span>}
+                      {typeof application.block === "number" && (
+                        <span className="font-mono">Block #{application.block}</span>
+                      )}
                     </div>
                     {application.photo && (
                       <div className="mt-2 flex items-center gap-3">
@@ -631,9 +635,11 @@ export const ApplyScreen = () => {
                     <span className="font-semibold text-foreground">Submitted:</span>{" "}
                     {new Date(reviewApplication.submittedAt).toLocaleString()}
                   </p>
-                  <p className="font-mono">CID {reviewApplication.cid}</p>
-                  <p className="font-mono">Tx {reviewApplication.tx}</p>
-                  <p className="font-mono">Block #{reviewApplication.block}</p>
+                  {reviewApplication.cid && <p className="font-mono">CID {reviewApplication.cid}</p>}
+                  {reviewApplication.tx && <p className="font-mono">Tx {reviewApplication.tx}</p>}
+                  {typeof reviewApplication.block === "number" && (
+                    <p className="font-mono">Block #{reviewApplication.block}</p>
+                  )}
                 </div>
                 <Separator />
                 <div className="space-y-2">
@@ -678,6 +684,18 @@ export const ApplyScreen = () => {
                         {reviewApplication.privateKey}
                       </span>
                     </p>
+                  )}
+                  {reviewApplication.vc && (
+                    <>
+                      <p>
+                        <span className="font-semibold text-foreground">VC Issued At:</span>{" "}
+                        <span className="font-mono">{reviewApplication.vc.issuedAt}</span>
+                      </p>
+                      <p>
+                        <span className="font-semibold text-foreground">VC ID:</span>{" "}
+                        <span className="font-mono break-all">{reviewApplication.vc.vcId}</span>
+                      </p>
+                    </>
                   )}
                 </div>
                 <div className="sticky bottom-0 bg-background p-3 border-t flex gap-2">
