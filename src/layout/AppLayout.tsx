@@ -24,9 +24,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { useTheme } from "@/hooks/useTheme";
 import { useWalletActions } from "@/modules/wallet/hooks";
 import {
   Home,
@@ -99,10 +97,7 @@ export const AppLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const { theme, toggleTheme } = useTheme();
   const { logout } = useWalletActions();
-
-  const isDark = theme === "dark";
 
   const activeDescription = useMemo(() => {
     const active = navItems.find((item) => item.to === location.pathname);
@@ -172,26 +167,6 @@ export const AppLayout = () => {
             {navItems.map((item) => renderNavLink(item))}
           </nav>
           <div className="flex items-center gap-2">
-            <div className="hidden items-center gap-2 rounded-full border px-3 py-1 md:flex">
-              <Sun className={cn("h-4 w-4 text-muted-foreground", isDark && "hidden")} />
-              <Moon className={cn("h-4 w-4 text-muted-foreground", !isDark && "hidden")} />
-              <Separator orientation="vertical" className="h-5" />
-              <Switch
-                checked={isDark}
-                onCheckedChange={() => toggleTheme()}
-                aria-label="Toggle theme"
-              />
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                logout();
-                navigate("/welcome", { replace: true });
-              }}
-            >
-              Logout
-            </Button>
             <Sheet open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" size="icon" className="md:hidden">
@@ -208,12 +183,6 @@ export const AppLayout = () => {
                     Quick access to every part of your decentralized identity vault.
                   </p>
                 </SheetHeader>
-                <div className="px-6">
-                  <div className="flex items-center justify-between rounded-md border px-3 py-2">
-                    <span className="text-sm font-medium">Dark mode</span>
-                    <Switch checked={isDark} onCheckedChange={() => toggleTheme()} />
-                  </div>
-                </div>
                 <Separator />
                 <nav className="flex flex-1 flex-col gap-1 px-4">
                   {navItems.map((item) => (

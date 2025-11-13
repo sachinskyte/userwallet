@@ -10,10 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/hooks/useTheme";
+import { useWalletActions } from "@/modules/wallet/hooks";
 import { useState } from "react";
 
 export const SettingsScreen = () => {
   const { theme, toggleTheme } = useTheme();
+  const { logout } = useWalletActions();
   const [developerMode, setDeveloperMode] = useState(false);
   const [secureStorage, setSecureStorage] = useState(true);
 
@@ -39,6 +41,21 @@ export const SettingsScreen = () => {
                 checked={theme === "dark"}
                 onCheckedChange={() => toggleTheme()}
               />
+            </div>
+            <Separator />
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">Logout</p>
+                <p className="text-xs text-muted-foreground">
+                  Sign out and clear local session keys and pending applications.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => logout()}
+              >
+                Logout
+              </Button>
             </div>
             <Separator />
             <div className="flex items-start justify-between gap-4">

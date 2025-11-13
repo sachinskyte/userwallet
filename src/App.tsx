@@ -27,15 +27,15 @@ const App = () => {
           <Route path="/init" element={<InitScreen />} />
         </Route>
         <Route element={<RequireDid />}>
-          <Route path="/" element={<AppLayout />}>
-            <Route index element={<HomeScreen />} />
+        <Route path="/" element={<AppLayout />}>
+          <Route index element={<HomeScreen />} />
             <Route path="home" element={<HomeScreen />} />
             <Route path="apply" element={<ApplyScreen />} />
-            <Route path="credentials" element={<CredentialsScreen />} />
+          <Route path="credentials" element={<CredentialsScreen />} />
             <Route path="requests" element={<RequestsScreen />} />
-            <Route path="share" element={<ShareScreen />} />
-            <Route path="recovery" element={<RecoveryScreen />} />
-            <Route path="settings" element={<SettingsScreen />} />
+          <Route path="share" element={<ShareScreen />} />
+          <Route path="recovery" element={<RecoveryScreen />} />
+          <Route path="settings" element={<SettingsScreen />} />
             <Route path="issuer-simulator" element={<IssuerSimulator />} />
           </Route>
         </Route>
