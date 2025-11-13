@@ -53,6 +53,7 @@ type WalletState = {
 
 type WalletActions = {
   generateDid: (force?: boolean) => string;
+  setDid: (did: string | null) => void;
   addDocument: (
     document: Omit<WalletDocument, "id" | "uploadedAt" | "status"> & {
       id?: string;
@@ -160,6 +161,16 @@ export const useWalletStore = create<WalletStore>()(
           });
 
           return newDid;
+        },
+        setDid: (did) => {
+          const { wallet } = get();
+          set({
+            wallet: {
+              ...wallet,
+              did,
+              didCreatedAt: did ? new Date().toISOString() : undefined,
+            },
+          });
         },
         addDocument: (documentInput) => {
           const { wallet } = get();
@@ -290,4 +301,5 @@ export const useWalletStore = create<WalletStore>()(
 
 export const selectWallet = (state: WalletStore) => state.wallet;
 export const selectWalletActions = (state: WalletStore) => state.actions;
+export const selectHasDid = (state: WalletStore) => Boolean(state.wallet.did);
 
