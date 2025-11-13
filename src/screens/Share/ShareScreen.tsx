@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import QrScanner from "react-qr-scanner";
 import { v4 as uuidv4 } from "uuid";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
+import QRScanner from "@/components/qr/QRScanner";
 import { useWallet } from "@/modules/wallet/hooks";
 import {
   Activity,
@@ -171,7 +171,7 @@ export const ShareScreen = () => {
     });
   };
 
-  const handleScannerResult = (result: string) => {
+  const handleScannerResult = useCallback((result: string) => {
     try {
       const parsed = JSON.parse(result) as SharePayload;
       setScannedPayload(parsed);
@@ -184,13 +184,11 @@ export const ShareScreen = () => {
     } catch (error) {
       setScanError("Invalid QR payload. Ensure it contains serialized JSON from Pandora's Vault.");
     }
-  };
+  }, []);
 
   const handleScan = useCallback(
-    (data: string | null) => {
-      if (data) {
-        handleScannerResult(data);
-      }
+    (data: string) => {
+      handleScannerResult(data);
     },
     [handleScannerResult]
   );
@@ -440,12 +438,7 @@ export const ShareScreen = () => {
         <CardContent className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-3 rounded-2xl border bg-muted/20 p-4">
             <div className="overflow-hidden rounded-xl border bg-background">
-              <QrScanner
-                delay={300}
-                onError={handleScanError}
-                onScan={handleScan}
-                style={{ width: "100%" }}
-              />
+              <QRScanner onDecode={handleScan} onError={handleScanError} />
             </div>
             <p className="text-xs text-muted-foreground">
               Camera feed stays in-browser. Pandora&apos;s Vault parses the QR and validates the payload
