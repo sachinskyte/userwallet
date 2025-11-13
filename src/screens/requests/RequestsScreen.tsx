@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import { useWallet, useWalletActions } from "@/modules/wallet/hooks";
-import { fakeCid, fakeTxHash, fakeBlockNumber, fakeHex } from "@/lib/fakeChain";
+import { fakeTxHash, fakeBlockNumber, fakeHex } from "@/lib/fakeChain";
 import { delay } from "@/lib/utils";
 import type { CredentialRequest, CredentialRequestResult } from "@/modules/wallet/store";
 import { cn } from "@/lib/utils";
@@ -89,6 +89,7 @@ export const RequestsScreen = () => {
 
   const handleSimulateRequest = () => {
     const sample = addRequest({
+      id: crypto.randomUUID(),
       verifierDID: `did:corp:${randomString(6)}`,
       requestedFields: ["Full Name", "Date of birth", "Address"],
       purpose: "Employment verification",

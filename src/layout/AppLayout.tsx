@@ -9,7 +9,6 @@ import {
   NavLink,
   Outlet,
   useLocation,
-  useNavigate,
 } from "react-router-dom";
 import {
   Badge,
@@ -25,7 +24,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { useWalletActions } from "@/modules/wallet/hooks";
 import {
   Home,
   IdCard,
@@ -33,8 +31,6 @@ import {
   Settings,
   Share2,
   ShieldCheck,
-  Sun,
-  Moon,
   Wallet2,
   QrCode,
   FileSignature,
@@ -95,9 +91,7 @@ const navItems: NavItem[] = [
 
 export const AppLayout = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const { logout } = useWalletActions();
 
   const activeDescription = useMemo(() => {
     const active = navItems.find((item) => item.to === location.pathname);
