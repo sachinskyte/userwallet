@@ -304,6 +304,22 @@ const randomString = (length: number) => {
 const randomInt = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 
+// Map backend application status to display status
+const getStatusBadge = (status: string) => {
+  const statusMap: Record<
+    string,
+    {
+      label: string;
+      variant: "outline" | "default" | "secondary" | "destructive";
+    }
+  > = {
+    Submitted: { label: "Submitted", variant: "outline" },
+    Verified: { label: "Approved ✓", variant: "secondary" },
+    Rejected: { label: "Rejected", variant: "destructive" },
+  };
+  return statusMap[status] || { label: status, variant: "outline" };
+};
+
 export const ApplyScreen = () => {
   const { did, applications } = useWallet();
   const { addApplication, updateApplication } = useWalletActions();
@@ -326,7 +342,6 @@ export const ApplyScreen = () => {
   const [backendApplications, setBackendApplications] = useState<
     BackendApplication[]
   >([]);
-  const [isLoadingBackendApps, setIsLoadingBackendApps] = useState(false);
   const [lastTransactionHash, setLastTransactionHash] = useState<string | null>(
     null
   );
@@ -339,12 +354,11 @@ export const ApplyScreen = () => {
     );
   }, [applications]);
 
-  // Fetch applications from backend when DID is available
+  // Fetch applications from backend when DID is available and poll for updates
   useEffect(() => {
     const fetchBackendApplications = async () => {
       if (!did) return;
 
-      setIsLoadingBackendApps(true);
       try {
         const apps = await getApplicationsForDid(did);
         setBackendApplications(apps);
@@ -352,11 +366,17 @@ export const ApplyScreen = () => {
         console.warn("Could not fetch applications from backend:", error);
         // Silently fail - backend might not be running
       } finally {
-        setIsLoadingBackendApps(false);
       }
     };
 
     fetchBackendApplications();
+
+    // Poll every 5 seconds for status updates
+    const interval = setInterval(() => {
+      fetchBackendApplications();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, [did]);
 
   const handleOpenForm = (config: ApplicationConfig) => {
@@ -414,7 +434,6 @@ export const ApplyScreen = () => {
       // Generate keys for blockchain access (for govweb)
       const privateKey = randomHex(64);
       const publicKey = randomHex(64);
-      const generatedDid = `did:vault:0x${publicKey.slice(0, 16)}`;
 
       // Submit to backend
       setIsSubmittingToBackend(true);
@@ -494,7 +513,7 @@ export const ApplyScreen = () => {
       // For non-Aadhaar applications, use local/fake chain
       const privateKey = randomHex(64);
       const publicKey = randomHex(64);
-      const generatedDid = `did:vault:0x${publicKey.slice(0, 16)}`;
+      const did = `did:vault:0x${publicKey.slice(0, 16)}`;
       const cid = `cid-${randomString(32)}`;
       const tx = `0x${randomHex(64)}`;
       const block = randomInt(1000, 9999);
@@ -507,7 +526,7 @@ export const ApplyScreen = () => {
         photo: capturedPhoto,
         privateKey,
         publicKey,
-        did: generatedDid,
+        did,
         cid,
         tx,
         block,
@@ -747,30 +766,37 @@ export const ApplyScreen = () => {
           </CardHeader>
           <Separator />
           <CardContent className="space-y-4 pt-4">
-            {backendApplications.map((app) => (
-              <div
-                key={app.id || app.txHash}
-                className="flex flex-col gap-3 rounded-lg border border-border/60 bg-background/60 p-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold text-foreground">{app.type}</p>
-                    <Badge variant="outline">{app.status || "Submitted"}</Badge>
+            {backendApplications.map((app) => {
+              const statusBadge = getStatusBadge(app.status || "Submitted");
+              return (
+                <div
+                  key={app.id || app.txHash}
+                  className="flex flex-col gap-3 rounded-lg border border-border/60 bg-background/60 p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-foreground">
+                        {app.type}
+                      </p>
+                      <Badge variant={statusBadge.variant}>
+                        {statusBadge.label}
+                      </Badge>
+                    </div>
+                    <p className="text-sm font-medium">{app.name}</p>
+                    {app.txHash && (
+                      <p className="text-xs font-mono text-muted-foreground">
+                        Tx: {app.txHash.slice(0, 16)}...
+                      </p>
+                    )}
+                    {app.cid && (
+                      <p className="text-xs font-mono text-muted-foreground">
+                        CID: {app.cid.slice(0, 16)}...
+                      </p>
+                    )}
                   </div>
-                  <p className="text-sm font-medium">{app.name}</p>
-                  {app.txHash && (
-                    <p className="text-xs font-mono text-muted-foreground">
-                      Tx: {app.txHash.slice(0, 16)}…
-                    </p>
-                  )}
-                  {app.cid && (
-                    <p className="text-xs font-mono text-muted-foreground">
-                      CID: {app.cid.slice(0, 16)}…
-                    </p>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
       )}

@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Aadhaar from IPFS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 32px;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: monospace;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-download:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-view {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-view:hover {
+            background: #f8f9ff;
+            transform: translateY(-2px);
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.loading {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .info-box {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-top: 25px;
+            border-radius: 5px;
+        }
+
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .info-box p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 25px;
+        }
+
+        .back-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📥 Download Aadhaar</h1>
+        <p class="subtitle">Retrieve your Aadhaar PDF from IPFS using the CID</p>
+
+        <div class="input-group">
+            <label for="cidInput">Enter IPFS CID:</label>
+            <input 
+                type="text" 
+                id="cidInput" 
+                placeholder="e.g., QmX5ZfG7..."
+                autocomplete="off"
+                spellcheck="false"
+            >
+        </div>
+
+        <div class="button-group">
+            <button class="btn-download" onclick="downloadFromIPFS()">
+                ⬇️ Download PDF
+            </button>
+            <button class="btn-view" onclick="viewOnIPFS()">
+                👁️ View Online
+            </button>
+        </div>
+
+        <div id="status" class="status"></div>
+
+        <div class="info-box">
+            <h3>ℹ️ How to use:</h3>
+            <p>
+                1. Generate an Aadhaar card using the generator<br>
+                2. Copy the CID provided after generation<br>
+                3. Paste the CID in the field above<br>
+                4. Click "Download PDF" to save to your device
+            </p>
+        </div>
+
+        <div class="back-link">
+            <a href="/">← Back to Generator</a>
+        </div>
+    </div>
+
+    <script>
+        const IPFS_GATEWAY = 'https://gateway.pinata.cloud/ipfs/';
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+        }
+
+        function hideStatus() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.display = 'none';
+        }
+
+        function getCID() {
+            const cid = document.getElementById('cidInput').value.trim();
+            if (!cid) {
+                showStatus('❌ Please enter a CID', 'error');
+                return null;
+            }
+            return cid;
+        }
+
+        async function downloadFromIPFS() {
+            const cid = getCID();
+            if (!cid) return;
+
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="loading-spinner"></span> Downloading...';
+                showStatus('📡 Fetching from IPFS...', 'loading');
+
+                const url = `${IPFS_GATEWAY}${cid}`;
+                console.log('Downloading from:', url);
+
+                // Fetch the file
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`File not found (${response.status})`);
+                }
+
+                // Get the blob
+                const blob = await response.blob();
+                console.log('Downloaded blob size:', blob.size, 'bytes');
+
+                // Create download link
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `Aadhaar_${cid.slice(0, 8)}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(downloadUrl);
+
+                showStatus('✅ Download complete! Check your downloads folder.', 'success');
+                
+            } catch (error) {
+                console.error('Download failed:', error);
+                showStatus(`❌ Download failed: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        function viewOnIPFS() {
+            const cid = getCID();
+            if (!cid) return;
+
+            const url = `${IPFS_GATEWAY}${cid}`;
+            window.open(url, '_blank');
+            showStatus('🌐 Opening in new tab...', 'success');
+        }
+
+        // Auto-fill CID from URL parameter
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const cidFromUrl = urlParams.get('cid');
+            if (cidFromUrl) {
+                document.getElementById('cidInput').value = cidFromUrl;
+                showStatus('✅ CID loaded from URL', 'success');
+            }
+        });
+
+        // Allow Enter key to download
+        document.getElementById('cidInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                downloadFromIPFS();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import {
   useWalletStore,
   selectWallet,
@@ -9,4 +8,3 @@ import {
 export const useWallet = () => useWalletStore(selectWallet);
 export const useWalletActions = () => useWalletStore(selectWalletActions);
 export const useHasDid = () => useWalletStore(selectHasDid);
-

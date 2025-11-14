@@ -1,15 +1,27 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { deriveAesKeyFromSignature, exportKeyToBase64, aesEncrypt } from "@/lib/cryptoUtils";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+} from "@/components/ui/card";
+import {
+  deriveAesKeyFromSignature,
+  exportKeyToBase64,
+  encryptAES as aesEncrypt,
+} from "@/lib/cryptoUtils";
 import { useWalletActions } from "@/modules/wallet/hooks";
 
 declare global {
   interface Window {
     ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      request: (args: {
+        method: string;
+        params?: unknown[];
+      }) => Promise<unknown>;
       isMetaMask?: boolean;
     };
   }
@@ -69,7 +81,9 @@ export default function LoginScreen() {
       navigate("/", { replace: true });
     } catch (e) {
       console.error("Login error:", e);
-      setError(e instanceof Error ? e.message : "Login failed. Please try again.");
+      setError(
+        e instanceof Error ? e.message : "Login failed. Please try again."
+      );
       setIsLoading(false);
     }
   }
@@ -93,7 +107,9 @@ export default function LoginScreen() {
               />
             </svg>
           </div>
-          <CardTitle className="text-2xl font-bold">PandoraVault Login</CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            PandoraVault Login
+          </CardTitle>
           <CardDescription>
             Connect your wallet to access your decentralized identity vault
           </CardDescription>
@@ -140,7 +156,9 @@ export default function LoginScreen() {
           </Button>
 
           <div className="text-center text-xs text-muted-foreground">
-            <p>By connecting, you agree to PandoraVault&apos;s terms of service.</p>
+            <p>
+              By connecting, you agree to PandoraVault&apos;s terms of service.
+            </p>
             <p className="mt-1">
               Your wallet signature is used to derive encryption keys locally.
             </p>
@@ -150,4 +168,3 @@ export default function LoginScreen() {
     </div>
   );
 }
-

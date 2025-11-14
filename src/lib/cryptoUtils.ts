@@ -4,7 +4,8 @@ export function hexToUint8Array(hex: string): Uint8Array {
   if (hex.startsWith("0x")) hex = hex.slice(2);
   if (hex.length % 2) hex = "0" + hex;
   const out = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
+  for (let i = 0; i < out.length; i++)
+    out[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
   return out;
 }
 
@@ -19,10 +20,28 @@ export function base64ToUint8Array(b64: string): Uint8Array {
   return arr;
 }
 
-export async function deriveAesKeyFromSignature(signature: string): Promise<CryptoKey> {
-  const sigBytes = hexToUint8Array(signature);
-  const hash = await crypto.subtle.digest("SHA-256", sigBytes);
-  return crypto.subtle.importKey("raw", hash, { name: "AES-GCM" }, true, ["encrypt", "decrypt"]);
+export async function deriveAesKeyFromSignature(sig) {
+  const raw = new TextEncoder().encode(sig);
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    toBufferSource(raw),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+
+  return crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: new TextEncoder().encode("pandora-vault"),
+      iterations: 500000,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
 }
 
 export async function exportKeyToBase64(key: CryptoKey): Promise<string> {
@@ -32,23 +51,45 @@ export async function exportKeyToBase64(key: CryptoKey): Promise<string> {
 
 export async function importKeyFromBase64(b64: string): Promise<CryptoKey> {
   const raw = base64ToUint8Array(b64);
-  return crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, true, ["encrypt", "decrypt"]);
+  return crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, true, [
+    "encrypt",
+    "decrypt",
+  ]);
 }
 
-export async function aesEncrypt(key: CryptoKey, plaintext: string): Promise<{ iv: string; ct: string }> {
+export function toBufferSource(u8) {
+  if (u8.buffer instanceof ArrayBuffer) return u8;
+  const copy = new Uint8Array(u8.length);
+  for (let i = 0; i < u8.length; i++) copy[i] = u8[i];
+  return copy;
+}
+
+export async function encryptAES(key, data) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encoded = new TextEncoder().encode(plaintext);
-  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded));
+  const encoded = new TextEncoder().encode(data);
+  const safeIv = toBufferSource(iv);
+  const safeData = toBufferSource(encoded);
+
+  const encrypted = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: safeIv },
+    key,
+    safeData
+  );
+
   return {
-    iv: uint8ArrayToBase64(iv),
-    ct: uint8ArrayToBase64(ct),
+    iv: Buffer.from(safeIv).toString("base64"),
+    data: Buffer.from(new Uint8Array(encrypted)).toString("base64"),
   };
 }
 
-export async function aesDecrypt(key: CryptoKey, ivB64: string, ctB64: string): Promise<string> {
-  const iv = base64ToUint8Array(ivB64);
-  const ct = base64ToUint8Array(ctB64);
-  const pt = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct));
-  return new TextDecoder().decode(pt);
-}
+export async function decryptAES(key, encrypted) {
+  const iv = Uint8Array.from(Buffer.from(encrypted.iv, "base64"));
+  const enc = Uint8Array.from(Buffer.from(encrypted.data, "base64"));
 
+  const decrypted = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: toBufferSource(iv) },
+    key,
+    toBufferSource(enc)
+  );
+  return new TextDecoder().decode(decrypted);
+}

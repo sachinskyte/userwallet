@@ -40,7 +40,13 @@ const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, relayerWallet);
 const app = express();
 
 // CORS configuration for frontend - allow all origins for development
-app.use(cors({ origin: '*', methods: ['GET', 'POST'], allowedHeaders: ['Content-Type'] }));
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
 app.use(bodyParser.json({ limit: "2mb" })); // reduced from 10mb to prevent DoS attacks
 app.use(express.static("public"));
 
@@ -517,94 +523,82 @@ app.post("/api/blockchain/access", async (req, res) => {
 
 // Admin endpoints
 app.post("/api/admin/verify", async (req, res) => {
-  if (!adminWallet)
-    return res.status(403).json({ error: "admin key not configured" });
+  console.log("=== Received /api/admin/verify request ===");
   try {
     const { recordId } = req.body;
-    if (!recordId) return res.status(400).json({ error: "recordId required" });
-    const adminContract = new ethers.Contract(
-      CONTRACT_ADDRESS,
-      ABI,
-      adminWallet
-    );
-    const tx = await adminContract.verifyApplication(recordId);
-    const receipt = await tx.wait();
+    if (!recordId) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Missing recordId" });
+    }
 
-    // Update in-memory store to sync with blockchain
-    applicationsStore.forEach((apps) => {
+    let found = false;
+    applicationsStore.forEach((apps, did) => {
       const app = apps.find((a) => a.id === recordId);
       if (app) {
         app.status = "Verified";
-        app.verifiedAt = Date.now();
-        app.verifyTxHash = tx.hash;
-        app.verifyBlockNumber = receipt.blockNumber;
-
-        console.log(`\n✅ Application VERIFIED:`);
-        console.log(`   Record ID: ${recordId}`);
-        console.log(`   DID: ${app.did}`);
-        console.log(`   Name: ${app.name}`);
-        console.log(`   TX Hash: ${tx.hash}`);
-        console.log(`   Block: ${receipt.blockNumber}`);
+        found = true;
+        console.log(`Application ${recordId} for DID ${did} verified.`);
       }
     });
 
-    res.json({ ok: true, txHash: tx.hash, blockNumber: receipt.blockNumber });
+    if (found) {
+      res.json({ success: true, message: "Application verified" });
+    } else {
+      res.status(404).json({ success: false, error: "Application not found" });
+    }
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: e.message || String(e) });
+    console.error("\n❌ ERROR in /api/admin/verify:", e);
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
 app.post("/api/admin/reject", async (req, res) => {
-  if (!adminWallet)
-    return res.status(403).json({ error: "admin key not configured" });
+  console.log("=== Received /api/admin/reject request ===");
   try {
     const { recordId } = req.body;
-    if (!recordId) return res.status(400).json({ error: "recordId required" });
-    const adminContract = new ethers.Contract(
-      CONTRACT_ADDRESS,
-      ABI,
-      adminWallet
-    );
-    const tx = await adminContract.rejectApplication(recordId);
-    const receipt = await tx.wait();
+    if (!recordId) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Missing recordId" });
+    }
 
-    // Update in-memory store to sync with blockchain
-    applicationsStore.forEach((apps) => {
+    let found = false;
+    applicationsStore.forEach((apps, did) => {
       const app = apps.find((a) => a.id === recordId);
       if (app) {
         app.status = "Rejected";
-        app.rejectedAt = Date.now();
-        app.rejectTxHash = tx.hash;
-        app.rejectBlockNumber = receipt.blockNumber;
-
-        console.log(`\n❌ Application REJECTED:`);
-        console.log(`   Record ID: ${recordId}`);
-        console.log(`   DID: ${app.did}`);
-        console.log(`   Name: ${app.name}`);
-        console.log(`   TX Hash: ${tx.hash}`);
-        console.log(`   Block: ${receipt.blockNumber}`);
+        found = true;
+        console.log(`Application ${recordId} for DID ${did} rejected.`);
       }
     });
 
-    res.json({ ok: true, txHash: tx.hash, blockNumber: receipt.blockNumber });
+    if (found) {
+      res.json({ success: true, message: "Application rejected" });
+    } else {
+      res.status(404).json({ success: false, error: "Application not found" });
+    }
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: e.message || String(e) });
+    console.error("\n❌ ERROR in /api/admin/reject:", e);
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
-app.post('/api/approve', async (req, res) => {
-  console.log('>>> Incoming APPROVE request:', req.body);
+app.post("/api/approve", async (req, res) => {
+  console.log(">>> Incoming APPROVE request:", req.body);
 
   try {
     const { recordId, officer } = req.body;
     if (!recordId || !officer) {
-      return res.status(400).json({ success: false, error: 'recordId or officer missing' });
+      return res
+        .status(400)
+        .json({ success: false, error: "recordId or officer missing" });
     }
 
     // FIX: convert recordId to bytes32
-    const recordIdBytes = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(recordId));
+    const recordIdBytes = ethers.utils.keccak256(
+      ethers.utils.toUtf8Bytes(recordId)
+    );
 
     // Blockchain call
     const tx = await contract.verifyApplication(recordIdBytes);
@@ -614,15 +608,15 @@ app.post('/api/approve', async (req, res) => {
     if (!global.applications) global.applications = {};
     if (!global.applications[recordId]) global.applications[recordId] = {};
 
-    global.applications[recordId].status = 'Verified';
+    global.applications[recordId].status = "Verified";
     global.applications[recordId].verifier = officer;
     global.applications[recordId].txHash = tx.hash;
 
-    console.log('>>> Application updated:', global.applications[recordId]);
+    console.log(">>> Application updated:", global.applications[recordId]);
 
-    res.json({ success: true, txHash: tx.hash, status: 'Verified' });
+    res.json({ success: true, txHash: tx.hash, status: "Verified" });
   } catch (err) {
-    console.error('>>> Approval error:', err);
+    console.error(">>> Approval error:", err);
     res.status(500).json({ success: false, error: err.toString() });
   }
 });

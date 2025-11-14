@@ -1,20 +1,29 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   deriveAesKeyFromSignature,
   exportKeyToBase64,
-  aesEncrypt,
-  aesDecrypt,
+  encryptAES as aesEncrypt,
+  decryptAES,
   importKeyFromBase64,
 } from "@/lib/cryptoUtils";
 
 declare global {
   interface Window {
     ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      request: (args: {
+        method: string;
+        params?: unknown[];
+      }) => Promise<unknown>;
       isMetaMask?: boolean;
     };
   }
@@ -57,7 +66,10 @@ export default function MetaMaskLogin() {
       const key = await deriveAesKeyFromSignature(sig);
       const keyB64 = await exportKeyToBase64(key);
 
-      const exampleSecret = JSON.stringify({ example: "vault encrypted item", ts: Date.now() });
+      const exampleSecret = JSON.stringify({
+        example: "vault encrypted item",
+        ts: Date.now(),
+      });
       const encrypted = await aesEncrypt(key, exampleSecret);
 
       localStorage.setItem("pv_did", DID);
@@ -83,7 +95,7 @@ export default function MetaMaskLogin() {
       }
       const enc = JSON.parse(encStr);
       const key = await importKeyFromBase64(keyB64);
-      const decrypted = await aesDecrypt(key, enc.iv, enc.ct);
+      const decrypted = await decryptAES(key, enc);
       alert("Vault decrypted: " + decrypted);
     } catch (err) {
       alert("Failed: " + (err instanceof Error ? err.message : String(err)));
@@ -115,12 +127,15 @@ export default function MetaMaskLogin() {
       <CardHeader>
         <CardTitle className="text-2xl">MetaMask DID Login</CardTitle>
         <CardDescription>
-          Connect your MetaMask wallet to create a decentralized identity and encrypt your vault locally.
+          Connect your MetaMask wallet to create a decentralized identity and
+          encrypt your vault locally.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-2">
-          <Badge variant={status === "done" ? "secondary" : "outline"}>Status: {status}</Badge>
+          <Badge variant={status === "done" ? "secondary" : "outline"}>
+            Status: {status}
+          </Badge>
         </div>
 
         {!address ? (
@@ -132,12 +147,16 @@ export default function MetaMaskLogin() {
             <div className="space-y-2 rounded-lg border bg-muted/20 p-4 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Address:</span>
-                <span className="font-mono text-xs text-foreground">{address}</span>
+                <span className="font-mono text-xs text-foreground">
+                  {address}
+                </span>
               </div>
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">DID:</span>
-                <span className="font-mono text-xs text-foreground break-all">{did}</span>
+                <span className="font-mono text-xs text-foreground break-all">
+                  {did}
+                </span>
               </div>
             </div>
 
@@ -166,6 +185,3 @@ export default function MetaMaskLogin() {
     </Card>
   );
 }
-
-
-
