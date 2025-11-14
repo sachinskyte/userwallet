@@ -15,7 +15,6 @@ import { ImportDidScreen } from "@/screens/onboarding/ImportDidScreen";
 import { InitScreen } from "@/screens/onboarding/InitScreen";
 import IssuerSimulator from "@/screens/apply/IssuerSimulator";
 import RequireDid from "@/routes/RequireDid";
-import MetaMaskLogin from "@/components/MetaMaskLogin";
 import LoginScreen from "@/screens/LoginScreen";
 import { AppInitializer } from "@/components/AppInitializer";
 
@@ -42,7 +41,6 @@ const App = () => {
           <Route path="recovery" element={<RecoveryScreen />} />
           <Route path="settings" element={<SettingsScreen />} />
             <Route path="issuer-simulator" element={<IssuerSimulator />} />
-            <Route path="wallet-login" element={<MetaMaskLogin />} />
           </Route>
         </Route>
       </Routes>

@@ -34,56 +34,118 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
 
   async function login() {
-    try {
-      setIsLoading(true);
-      setError(null);
+    setIsLoading(true);
+    setError(null);
 
+    try {
+      // Check if MetaMask is installed
       if (!window.ethereum) {
-        setError("Please install MetaMask to continue");
+        setError(
+          "MetaMask is not installed. Please install MetaMask extension to continue."
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if MetaMask is the provider
+      if (!window.ethereum.isMetaMask) {
+        setError("Please use MetaMask wallet to login.");
+        setIsLoading(false);
         return;
       }
 
       // Dynamic import to avoid SSR issues
       const { ethers } = await import("ethers");
       const provider = new ethers.BrowserProvider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
+
+      // Request account access
+      let accounts: string[];
+      try {
+        accounts = (await provider.send("eth_requestAccounts", [])) as string[];
+        if (!accounts || accounts.length === 0) {
+          throw new Error("No accounts found. Please unlock MetaMask.");
+        }
+      } catch (err: any) {
+        if (err.code === 4001) {
+          throw new Error(
+            "MetaMask connection rejected. Please approve the connection to continue."
+          );
+        }
+        throw err;
+      }
+
       const signer = await provider.getSigner();
       const addr = await signer.getAddress();
       const network = await provider.getNetwork();
       const chain = network.chainId.toString();
       const did = `did:pkh:eip155:${chain}:${addr}`;
 
-      const message = `Sign in to PandoraVault\n\nAddress: ${addr}\nChain: ${chain}\n\nBy signing, you prove control over your decentralized identity.`;
-      const signature = await signer.signMessage(message);
+      // Create signing message
+      const timestamp = Date.now();
+      const message = `Sign in to PandoraVault\n\nAddress: ${addr}\nChain ID: ${chain}\nTimestamp: ${timestamp}\n\nBy signing this message, you prove control over your decentralized identity.\n\nThis signature will be used to derive your encryption key locally.`;
 
-      const recovered = ethers.verifyMessage(message, signature);
-      if (recovered.toLowerCase() !== addr.toLowerCase()) {
-        throw new Error("Signature verification failed");
+      // Request signature
+      let signature: string;
+      try {
+        signature = await signer.signMessage(message);
+      } catch (err: any) {
+        if (err.code === 4001 || err.code === "ACTION_REJECTED") {
+          throw new Error(
+            "Signature rejected. You must sign the message to login."
+          );
+        }
+        throw err;
       }
 
+      // Verify signature
+      const recovered = ethers.verifyMessage(message, signature);
+      if (recovered.toLowerCase() !== addr.toLowerCase()) {
+        throw new Error("Signature verification failed. Please try again.");
+      }
+
+      // Derive encryption key from signature
       const key = await deriveAesKeyFromSignature(signature);
       const keyB64 = await exportKeyToBase64(key);
 
+      // Create initial vault data
       const encrypted = await aesEncrypt(
         key,
-        JSON.stringify({ vault: "initialized", created: Date.now() })
+        JSON.stringify({
+          vault: "initialized",
+          created: timestamp,
+          version: "1.0.0",
+        })
       );
 
+      // Store credentials
       localStorage.setItem("pv_did", did);
       localStorage.setItem("pv_addr", addr);
       localStorage.setItem("pv_key", keyB64);
       localStorage.setItem("pv_vault", JSON.stringify(encrypted));
+      localStorage.setItem("pv_chain", chain);
 
       // Sync with Zustand store
       setDid(did);
 
+      // Small delay to ensure state updates
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       // Redirect to home
       navigate("/", { replace: true });
-    } catch (e) {
-      console.error("Login error:", e);
-      setError(
-        e instanceof Error ? e.message : "Login failed. Please try again."
-      );
+    } catch (e: any) {
+      console.error("Login error (AES export failed?) →", e);
+      let errorMessage = "Login failed. Please try again.";
+
+      if (e instanceof Error) {
+        errorMessage = e.message;
+      } else if (e?.message) {
+        errorMessage = e.message;
+      } else if (e?.code === -32002) {
+        errorMessage =
+          "MetaMask is already processing a request. Please check your MetaMask extension.";
+      }
+
+      setError(errorMessage);
       setIsLoading(false);
     }
   }

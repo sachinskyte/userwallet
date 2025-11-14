@@ -39,7 +39,7 @@ export async function deriveAesKeyFromSignature(sig) {
     },
     keyMaterial,
     { name: "AES-GCM", length: 256 },
-    false,
+    true,
     ["encrypt", "decrypt"]
   );
 }
@@ -77,14 +77,14 @@ export async function encryptAES(key, data) {
   );
 
   return {
-    iv: Buffer.from(safeIv).toString("base64"),
-    data: Buffer.from(new Uint8Array(encrypted)).toString("base64"),
+    iv: uint8ArrayToBase64(new Uint8Array(safeIv)),
+    data: uint8ArrayToBase64(new Uint8Array(encrypted)),
   };
 }
 
 export async function decryptAES(key, encrypted) {
-  const iv = Uint8Array.from(Buffer.from(encrypted.iv, "base64"));
-  const enc = Uint8Array.from(Buffer.from(encrypted.data, "base64"));
+  const iv = base64ToUint8Array(encrypted.iv);
+  const enc = base64ToUint8Array(encrypted.data);
 
   const decrypted = await crypto.subtle.decrypt(
     { name: "AES-GCM", iv: toBufferSource(iv) },

@@ -35,6 +35,37 @@
       "artifacts": [
         "AadhaarApplications"
       ]
+    },
+    "C:\\Users\\Sachi\\Desktop\\mvjchack\\userwallet\\aadhaar-vault\\contracts\\Final-block-chain.sol": {
+      "lastModificationDate": 1763090569414,
+      "contentHash": "d41d8cd98f00b204e9800998ecf8427e",
+      "sourceName": "contracts/Final-block-chain.sol",
+      "solcConfig": {
+        "version": "0.8.17",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [],
+      "artifacts": []
     }
   }
 }

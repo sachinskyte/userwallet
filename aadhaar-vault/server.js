@@ -155,6 +155,7 @@ app.post("/api/apply", async (req, res) => {
       name,
       dob,
       address,
+      photo: photo || null, // Store the base64 photo data
       status: "Submitted",
       txHash: tx.hash,
       cid: cidLike,
@@ -321,6 +322,16 @@ app.get("/api/applications", async (req, res) => {
         allApps.push(...apps);
       });
       console.log("Found", allApps.length, "total applications");
+
+      // Log photo data availability
+      allApps.forEach((app) => {
+        console.log(
+          `  - ${app.name}: photo=${
+            !!app.photo ? "YES (" + app.photo.substring(0, 30) + "...)" : "NO"
+          }`
+        );
+      });
+
       console.log("=== END FETCH ===\n");
       return res.json(allApps);
     }
@@ -533,19 +544,74 @@ app.post("/api/admin/verify", async (req, res) => {
     }
 
     let found = false;
+    let application = null;
     applicationsStore.forEach((apps, did) => {
       const app = apps.find((a) => a.id === recordId);
       if (app) {
-        app.status = "Verified";
+        application = app;
         found = true;
-        console.log(`Application ${recordId} for DID ${did} verified.`);
       }
     });
 
-    if (found) {
-      res.json({ success: true, message: "Application verified" });
-    } else {
-      res.status(404).json({ success: false, error: "Application not found" });
+    if (!found || !application) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Application not found" });
+    }
+
+    // Generate Aadhaar PDF and upload to IPFS
+    console.log("📄 Generating Aadhaar card and uploading to IPFS...");
+    try {
+      const axios = require("axios");
+      const aadhaarGenResponse = await axios.post(
+        "http://localhost:3005/api/generate-and-upload-aadhaar",
+        {
+          name: application.name,
+          dob: application.dob,
+          address: application.address,
+          photo: application.photo,
+          aadhaarNumber: recordId,
+          did: application.did,
+          recordId: recordId,
+        },
+        { timeout: 30000 }
+      );
+
+      if (aadhaarGenResponse.data.success) {
+        const cid = aadhaarGenResponse.data.cid;
+        const ipfsUrl = aadhaarGenResponse.data.url;
+
+        // Update application with CID
+        application.status = "Verified";
+        application.aadhaarCID = cid;
+        application.aadhaarIPFSUrl = ipfsUrl;
+        application.verifiedAt = Date.now();
+
+        console.log(`✓ Application ${recordId} verified with CID: ${cid}`);
+
+        res.json({
+          success: true,
+          message: "Application verified and Aadhaar card generated",
+          cid: cid,
+          ipfsUrl: ipfsUrl,
+        });
+      } else {
+        throw new Error("Failed to generate Aadhaar card");
+      }
+    } catch (ipfsError) {
+      console.error(
+        "⚠️ IPFS upload failed, but marking as verified:",
+        ipfsError.message
+      );
+      // Still mark as verified even if IPFS upload fails
+      application.status = "Verified";
+      application.verifiedAt = Date.now();
+
+      res.json({
+        success: true,
+        message: "Application verified (IPFS upload pending)",
+        warning: "Aadhaar card generation failed, will retry later",
+      });
     }
   } catch (e) {
     console.error("\n❌ ERROR in /api/admin/verify:", e);
