@@ -40,14 +40,7 @@ const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, relayerWallet);
 const app = express();
 
 // CORS configuration for frontend - allow all origins for development
-app.use(
-  cors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: false,
-  })
-);
+app.use(cors({ origin: '*', methods: ['GET', 'POST'], allowedHeaders: ['Content-Type'] }));
 app.use(bodyParser.json({ limit: "2mb" })); // reduced from 10mb to prevent DoS attacks
 app.use(express.static("public"));
 
@@ -545,6 +538,13 @@ app.post("/api/admin/verify", async (req, res) => {
         app.verifiedAt = Date.now();
         app.verifyTxHash = tx.hash;
         app.verifyBlockNumber = receipt.blockNumber;
+
+        console.log(`\n✅ Application VERIFIED:`);
+        console.log(`   Record ID: ${recordId}`);
+        console.log(`   DID: ${app.did}`);
+        console.log(`   Name: ${app.name}`);
+        console.log(`   TX Hash: ${tx.hash}`);
+        console.log(`   Block: ${receipt.blockNumber}`);
       }
     });
 
@@ -577,6 +577,13 @@ app.post("/api/admin/reject", async (req, res) => {
         app.rejectedAt = Date.now();
         app.rejectTxHash = tx.hash;
         app.rejectBlockNumber = receipt.blockNumber;
+
+        console.log(`\n❌ Application REJECTED:`);
+        console.log(`   Record ID: ${recordId}`);
+        console.log(`   DID: ${app.did}`);
+        console.log(`   Name: ${app.name}`);
+        console.log(`   TX Hash: ${tx.hash}`);
+        console.log(`   Block: ${receipt.blockNumber}`);
       }
     });
 
@@ -584,6 +591,39 @@ app.post("/api/admin/reject", async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: e.message || String(e) });
+  }
+});
+
+app.post('/api/approve', async (req, res) => {
+  console.log('>>> Incoming APPROVE request:', req.body);
+
+  try {
+    const { recordId, officer } = req.body;
+    if (!recordId || !officer) {
+      return res.status(400).json({ success: false, error: 'recordId or officer missing' });
+    }
+
+    // FIX: convert recordId to bytes32
+    const recordIdBytes = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(recordId));
+
+    // Blockchain call
+    const tx = await contract.verifyApplication(recordIdBytes);
+    await tx.wait();
+
+    // Update in-memory DB (fallback for demo)
+    if (!global.applications) global.applications = {};
+    if (!global.applications[recordId]) global.applications[recordId] = {};
+
+    global.applications[recordId].status = 'Verified';
+    global.applications[recordId].verifier = officer;
+    global.applications[recordId].txHash = tx.hash;
+
+    console.log('>>> Application updated:', global.applications[recordId]);
+
+    res.json({ success: true, txHash: tx.hash, status: 'Verified' });
+  } catch (err) {
+    console.error('>>> Approval error:', err);
+    res.status(500).json({ success: false, error: err.toString() });
   }
 });
 
